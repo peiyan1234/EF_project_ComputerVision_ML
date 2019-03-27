@@ -37,9 +37,21 @@ def get_labels(filename_json_dir):
 def find_the_maxarea_triangle(labels_list):
     """
     """
-    Area = 0
 
+    # point1: (x1, y1)
+    # point2: (x2, y2)
+    # point3: (x3, y3)
 
+    Array_x = [x1, x1, x1, x2, x2, x2, x3, x3, x3]
+    Array_y = [y1, y2, y3, y1, y2, y3, y1, y2, y3]
+    Array_0 = [0 ,  1, -1, -1,  0,  1,  1, -1,  0]
+
+    Array_x = np.asarray(Array_x)
+    Array_y = np.asarray(Array_y)
+    Array_0 = np.asarray(Array_0)
+
+    Area = 0.5 * np.sum(np.multiply(Array_x, np.multiply(Array_y,Array_0)))
+    Area = np.absolute(Area)
 
 def find_the_apex_cordis(ventrics_with_max_area):
     """
