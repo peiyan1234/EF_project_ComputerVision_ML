@@ -24,9 +24,7 @@ def Modified_Simpson_calculator(filename_json_dir):
     base_vertices = check_the_bottom_2_points(labels_list, largest_triangle)
 
     N = 20 # the amount of disks for discretizely summing up the LV volume
-    LV_volume = get_LV_volume(base_vertices, N, labels_list)
-
-    return LV_volume
+    return get_LV_volume(base_vertices, N, labels_list)
 
 def get_labels(filename_json_dir):
     """
@@ -139,7 +137,10 @@ def get_LV_volume(base_vertices, N, labels_list):
     x_mid = ( base_vertices[1][0] + base_vertices[2][0] ) / 2.0
     y_mid = ( base_vertices[1][1] + base_vertices[2][1] ) / 2.0
 
+    
+
     #list_segmented_N_x = list(np.linspace(x_ap, x_mid, N+1))
     #list_segmented_N_y = list(np.linspace(y_ap, x_mid, N+1))
 
     #height = math.sqrt( (x_ap - x_mid)**2 + (y_ap - y_mid)**2 ) / N
+    return LV_volume
