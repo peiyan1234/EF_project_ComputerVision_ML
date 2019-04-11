@@ -23,13 +23,8 @@ def Modified_Simpson_calculator(filename_json_dir):
     largest_triangle = find_the_largest_triangle(labels_list)
     base_vertices = check_the_bottom_2_points(labels_list, largest_triangle)
 
-    x_ap, y_ap = base_vertices[0]
-    x_mid = ( base_vertices[1][0] + base_vertices[2][0] ) / 2.0
-    y_mid = ( base_vertices[1][1] + base_vertices[2][1] ) / 2.0
-    
     N = 20 # the amount of disks for discretizely summing up the LV volume
-
-    LV_volume = get_LV_volume(x_ap, y_ap, x_mid, y_mid, N)
+    LV_volume = get_LV_volume(base_vertices, N, labels_list)
 
     return LV_volume
 
@@ -138,9 +133,13 @@ def get_corrected_base_vertices(K_numerator, K_denominator, labels_list, apex_co
             
         return [apex_cordis, [x_bleft, y_bleft], [x_bright, y_bright]]
 
-def get_LV_volume(x_ap, y_ap, x_mid, y_mid, N):
+def get_LV_volume(base_vertices, N, labels_list):
 
-    list_segmented_N_x = list(np.linspace(x_ap, x_mid, N+1))
-    list_segmented_N_y = list(np.linspace(y_ap, x_mid, N+1))
+    x_ap, y_ap = base_vertices[0]
+    x_mid = ( base_vertices[1][0] + base_vertices[2][0] ) / 2.0
+    y_mid = ( base_vertices[1][1] + base_vertices[2][1] ) / 2.0
 
-    height = math.sqrt( (x_ap - x_mid)**2 + (y_ap - y_mid)**2 ) / N
+    #list_segmented_N_x = list(np.linspace(x_ap, x_mid, N+1))
+    #list_segmented_N_y = list(np.linspace(y_ap, x_mid, N+1))
+
+    #height = math.sqrt( (x_ap - x_mid)**2 + (y_ap - y_mid)**2 ) / N
