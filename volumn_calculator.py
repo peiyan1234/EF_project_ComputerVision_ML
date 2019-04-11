@@ -29,12 +29,9 @@ def Modified_Simpson_calculator(filename_json_dir):
     
     N = 20 # the amount of segmented lines
 
-    list_segmented_N_x = list(np.linspace(x_ap, x_mid, N+1))
-    list_segmented_N_y = list(np.linspace(y_ap, x_mid, N+1))
+    LV_volume = get_LV_volume(x_ap, y_ap, x_mid, y_mid, N)
 
-    height = math.sqrt( (x_ap - x_mid)**2 + (y_ap - y_mid)**2 ) / N
-
-    return LV_volumn
+    return LV_volume
 
 def get_labels(filename_json_dir):
     """
@@ -140,3 +137,10 @@ def get_corrected_base_vertices(K_numerator, K_denominator, labels_list, apex_co
             y_bright = y_bright*(1 - check_right) + y_label*check_right
             
         return [apex_cordis, [x_bleft, y_bleft], [x_bright, y_bright]]
+
+def get_LV_volume(x_ap, y_ap, x_mid, y_mid, N):
+    
+    list_segmented_N_x = list(np.linspace(x_ap, x_mid, N+1))
+    list_segmented_N_y = list(np.linspace(y_ap, x_mid, N+1))
+
+    height = math.sqrt( (x_ap - x_mid)**2 + (y_ap - y_mid)**2 ) / N
