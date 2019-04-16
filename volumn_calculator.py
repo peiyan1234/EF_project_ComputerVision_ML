@@ -16,9 +16,7 @@ global apex_cordis # the coordinates of an apex cordis
 global base_vertices # a list of three points that will be used in Modified Simpson's Method later.
 
 def Modified_Simpson_calculator(filename_json_dir):
-    """
-    This function calculate the volumn of a left ventricle.
-    """
+
     labels_list = get_labels(filename_json_dir)
     largest_triangle = find_the_largest_triangle(labels_list)
     base_vertices = check_the_bottom_2_points(labels_list, largest_triangle)
@@ -27,17 +25,14 @@ def Modified_Simpson_calculator(filename_json_dir):
     return get_LV_volume(base_vertices, N, labels_list)
 
 def get_labels(filename_json_dir):
-    """
-    This function outputs the coordinations of labels on an ultrasound image
-    """
+
     with open(filename_json_dir, encoding='utf-8') as json_file:
         label_dic = json.load(json_file)
 
     return label_dic['shapes'][0]['points']
 
 def find_the_largest_triangle(labels_list):
-    """
-    """
+
     Area = 0
     largest_triangle = []
 
@@ -81,8 +76,7 @@ def check_the_bottom_2_points(labels_list, largest_triangle):
     # return a list of three points that will be used in Modified Simpson's Method later.
 
 def find_the_apex_cordis(largest_triangle):
-    """
-    """
+ 
     label1, label2, label3 = largest_triangle
     x1, y1 = label1 # point1: (x1, y1)
     x2, y2 = label2 # point2: (x2, y2)
@@ -133,14 +127,113 @@ def get_corrected_base_vertices(K_numerator, K_denominator, labels_list, apex_co
 
 def get_LV_volume(base_vertices, N, labels_list):
 
+    # Step 1: Separate the line to 20 segements
     x_ap, y_ap = base_vertices[0]
     x_mid = ( base_vertices[1][0] + base_vertices[2][0] ) / 2.0
     y_mid = ( base_vertices[1][1] + base_vertices[2][1] ) / 2.0
 
+    b_1x, b_1y = base_vertices[1]
+    b_2x, b_2y = base_vertices[2]
+
+    t_b1 = np.dot([x_mid - x_ap, y_mid - y_ap], [b_1x - x_ap, b_1y - y_ap]) / np.dot([x_mid - x_ap, y_mid - y_ap], [x_mid - x_ap, y_mid - y_ap])
+    t_b2 = np.dot([x_mid - x_ap, y_mid - y_ap], [b_2x - x_ap, b_2y - y_ap]) / np.dot([x_mid - x_ap, y_mid - y_ap], [x_mid - x_ap, y_mid - y_ap])
+
+    t_L = t_b1 * (t_b1 >= t_b2) + t_b2 * (t_b1 < t_b2)
+    x_L = x_ap + (x_mid - x_ap) * t_L # outside point along the middle line
+    y_L = y_ap + (y_mid - y_ap) * t_L # outside point along the middle line
+
+    t_l = t_b1 * (t_b1 < t_b2) + t_b2 * (t_b1 >= t_b2)
+    x_l = x_ap + (x_mid - x_ap) * t_l # inside point along the middle line
+    y_l = y_ap + (y_mid - y_ap) * t_l # inside point along the middle line
     
+    # Step 2: Define the cross points and the diameters of Simpson's disks   
+    list_segmented_N_x = list(np.linspace(x_ap, x_L, N+1))
+    list_segmented_N_y = list(np.linspace(y_ap, y_L, N+1))
+    
+    height = math.sqrt( (x_ap - x_L)**2 + (y_ap - y_L)**2 ) / N
 
-    #list_segmented_N_x = list(np.linspace(x_ap, x_mid, N+1))
-    #list_segmented_N_y = list(np.linspace(y_ap, x_mid, N+1))
+    K_numerator = (b_1x + b_2x - 2*x_ap) 
+    K_denominator = (b_1y + b_2y - 2*y_ap) 
 
-    #height = math.sqrt( (x_ap - x_mid)**2 + (y_ap - y_mid)**2 ) / N
+    K = K_numerator / K_denominator
+    C = -K*y_ap + x_ap
+
+    Left_labels = []
+    Right_labels = []
+    for label in labels_list:
+        x_label, y_label = label
+        if x_label < (K*y_label + C):
+            Left_labels.append(label)
+        elif x_label > (K*y_label + C):
+            Right_labels.append(label)
+
+    LV_volume = 0
+    for segment in range(0, len(list_segmented_N_x)-1):
+        x_h = list_segmented_N_x[segment + 1]
+        y_h = list_segmented_N_y[segment + 1]
+        
+        distance_h_2_apex_cordis = math.sqrt( (x_h - x_ap)**2 + (y_h - y_ap)**2 )
+        distance_l_2_apex_cordis = math.sqrt( (x_l - x_ap)**2 + (y_l - y_ap)**2 )
+        distance_m_2_apex_cordis = math.sqrt( (x_mid - x_ap)**2 + (y_mid - y_ap)**2 )
+
+        if distance_h_2_apex_cordis <= distance_m_2_apex_cordis:
+            x_left1, y_left1 = x_ap, y_ap
+            x_left2, y_left2 = x_l, y_l
+            for label in Left_labels:
+                x, y = label
+                cos_theta_1 = np.dot([x_left1 - x_h, y_left1 - y_h], [x_ap - x_h, y_ap - y_h]) / ( math.sqrt( (x_left1 - x_h)**2 + (y_left1 - y_h)**2 ) * math.sqrt( (x_ap - x_h)**2 + (y_ap - y_h)**2 ) )
+                cos_theta_2 = np.dot([x_left2 - x_h, y_left2 - y_h], [x_ap - x_h, y_ap - y_h]) / ( math.sqrt( (x_left2 - x_h)**2 + (y_left2 - y_h)**2 ) * math.sqrt( (x_ap - x_h)**2 + (y_ap - y_h)**2 ) )
+                cos_theta_label = np.dot([x - x_h, y - y_h], [x_ap - x_h, y_ap - y_h]) / ( math.sqrt( (x - x_h)**2 + (y - y_h)**2 ) * math.sqrt( (x_ap - x_h)**2 + (y_ap - y_h)**2 ) )
+
+                x_left1 = x * (cos_theta_label >= 0) * (cos_theta_label < cos_theta_1) + x_left1 * (1- (cos_theta_label >= 0) * (cos_theta_label < cos_theta_1))
+                y_left1 = y * (cos_theta_label >= 0) * (cos_theta_label < cos_theta_1) + y_left1 * (1- (cos_theta_label >= 0) * (cos_theta_label < cos_theta_1))
+
+                x_left2 = x * (cos_theta_label <= 0) * (cos_theta_label > cos_theta_2) + x_left2 * (1 - (cos_theta_label <= 0) * (cos_theta_label > cos_theta_2))
+                y_left2 = y * (cos_theta_label <= 0) * (cos_theta_label > cos_theta_2) + y_left2 * (1 - (cos_theta_label <= 0) * (cos_theta_label > cos_theta_2))
+
+            checker1 = (x_left2 == x_left1) * (y_left2 - y_left1)
+            if checker1 == 0:
+                x_left = x_left1
+                y_left = y_left1
+            else:
+                t = np.dot([x_h - x_left1, y_h - y_left1], [x_ap - x_h, y_ap - y_h]) / np.dot([x_left2 - x_left1, y_left2 - y_left1], [x_ap - x_h, y_ap - y_h])
+                x_left = x_left1 + (x_left2 - x_left1) * t
+                y_left = y_left1 + (y_left2 - y_left1) * t
+
+            x_right1, y_right1 = x_ap, y_ap
+            x_right2, y_right2 = x_ap, y_ap
+            for label in Right_labels:
+                x, y = label
+                cos_theta_1 = np.dot([x_right1 - x_h, y_right1 - y_h], [x_ap - x_h, y_ap - y_h]) / ( math.sqrt( (x_right1 - x_h)**2 + (y_right1 - y_h)**2 ) * math.sqrt( (x_ap - x_h)**2 + (y_ap - y_h)**2 ) )
+                cos_theta_2 = np.dot([x_right2 - x_h, y_right2 - y_h], [x_ap - x_h, y_ap - y_h]) / ( math.sqrt( (x_right2 - x_h)**2 + (y_right2 - y_h)**2 ) * math.sqrt( (x_ap - x_h)**2 + (y_ap - y_h)**2 ) )
+                cos_theta_label = np.dot([x - x_h, y - y_h], [x_ap - x_h, y_ap - y_h]) / ( math.sqrt( (x - x_h)**2 + (y - y_h)**2 ) * math.sqrt( (x_ap - x_h)**2 + (y_ap - y_h)**2 ) )
+
+                x_right1 = x * (cos_theta_label >= 0) * (cos_theta_label < cos_theta_1) + x_right1 * (1 - (cos_theta_label >= 0) * (cos_theta_label < cos_theta_1))
+                y_right1 = y * (cos_theta_label >= 0) * (cos_theta_label < cos_theta_1) + y_right1 * (1 - (cos_theta_label >= 0) * (cos_theta_label < cos_theta_1))
+
+                x_right2 = x * (cos_theta_label <= 0) * (cos_theta_label > cos_theta_2) + x_right2 * (1 - (cos_theta_label <= 0) * (cos_theta_label > cos_theta_2))
+                y_right2 = y * (cos_theta_label <= 0) * (cos_theta_label > cos_theta_2) + y_right2 * (1 - (cos_theta_label <= 0) * (cos_theta_label > cos_theta_2))
+
+            checker2 = (x_right2 == x_right1) * (y_right2 - y_right1)
+            if checker2 == 0:
+                x_right = x_right1
+                y_right = y_right1
+            else:
+                t = np.dot([x_h - x_right1, y_h - y_right1], [x_ap - x_h, y_ap - y_h]) / np.dot([x_right2 - x_right1, y_right2 - y_right1], [x_ap - x_h, y_ap - y_h])
+                x_right = x_right1 + (x_right2 - x_right1) * t
+                y_right = y_right1 + (y_right2 - y_right1) * t
+
+            if distance_h_2_apex_cordis <= distance_l_2_apex_cordis:
+                LV_volume = LV_volume + math.pi * 0.25 * height * math.sqrt( (x_left - x_right)**2 + (y_left - y_right)**2 )
+            
+            elif (distance_h_2_apex_cordis > distance_l_2_apex_cordis) * (distance_h_2_apex_cordis <= distance_m_2_apex_cordis):   
+                distance_left_2_middle = math.sqrt( (x_left - x_h)**2 + (y_left - y_h)**2 )
+                distance_right_2_middle = math.sqrt( (x_right - x_h)**2 + (y_right - y_h)**2 )
+                checker_longest = (distance_left_2_middle >= distance_right_2_middle)
+
+                LV_volume = LV_volume + (math.pi * height * distance_left_2_middle**2) * checker_longest + (math.pi * height * distance_right_2_middle**2) * (1 - checker_longest)
+
+        elif distance_h_2_apex_cordis > distance_m_2_apex_cordis:
+            ""
+
     return LV_volume
