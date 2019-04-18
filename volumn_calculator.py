@@ -148,7 +148,7 @@ def get_LV_volume(base_vertices, N, labels_list):
         if distance_h_2_apex_cordis <= distance_m_2_apex_cordis:
             x_left1, y_left1 = x_ap, y_ap
             x_left2, y_left2 = x_mid, y_mid
-            for label in Left_labels_by_middle:
+            for label in Left_labels_by_middle[1:-1]:
                 x, y = label
                 cos_theta_1 = np.dot([x_left1 - x_h, y_left1 - y_h], [x_ap - x_h, y_ap - y_h]) / ( math.sqrt( (x_left1 - x_h)**2 + (y_left1 - y_h)**2 ) * math.sqrt( (x_ap - x_h)**2 + (y_ap - y_h)**2 ) )
                 cos_theta_2 = np.dot([x_left2 - x_h, y_left2 - y_h], [x_ap - x_h, y_ap - y_h]) / ( math.sqrt( (x_left2 - x_h)**2 + (y_left2 - y_h)**2 ) * math.sqrt( (x_ap - x_h)**2 + (y_ap - y_h)**2 ) )
@@ -174,7 +174,7 @@ def get_LV_volume(base_vertices, N, labels_list):
 
             x_right1, y_right1 = x_ap, y_ap
             x_right2, y_right2 = x_mid, y_mid
-            for label in Right_labels_by_middle:
+            for label in Right_labels_by_middle[1:-1]:
                 x, y = label
                 cos_theta_1 = np.dot([x_right1 - x_h, y_right1 - y_h], [x_ap - x_h, y_ap - y_h]) / ( math.sqrt( (x_right1 - x_h)**2 + (y_right1 - y_h)**2 ) * math.sqrt( (x_ap - x_h)**2 + (y_ap - y_h)**2 ) )
                 cos_theta_2 = np.dot([x_right2 - x_h, y_right2 - y_h], [x_ap - x_h, y_ap - y_h]) / ( math.sqrt( (x_right2 - x_h)**2 + (y_right2 - y_h)**2 ) * math.sqrt( (x_ap - x_h)**2 + (y_ap - y_h)**2 ) )
@@ -433,7 +433,7 @@ def get_sides_labels(base_vertices, labels_list):
         elif x_label > (K_b1*y_label + C_b1):
             Right_labels_b1.append(label)
 
-    Left_labels_by_middle = [base_vertices[0]] + Left_labels_b1 + [base_vertices[1]] + Right_labels_b1 + [[x_mid, y_mid]]
+    Left_labels_by_middle = Left_labels_b1 + [base_vertices[1]] + Right_labels_b1
 
     Left_labels_b2 = []
     Right_labels_b2 = []
@@ -445,6 +445,6 @@ def get_sides_labels(base_vertices, labels_list):
         elif x_label > (K_b2*y_label + C_b2):
             Right_labels_b2.append(label)
 
-    Right_labels_by_middle = [base_vertices[0]] + Right_labels_b2 + [base_vertices[2]] + Left_labels_b2 + [[x_mid, y_mid]]
+    Right_labels_by_middle = Right_labels_b2 + [base_vertices[2]] + Left_labels_b2
 
     return Left_labels_by_middle, Right_labels_by_middle
