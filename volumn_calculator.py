@@ -148,14 +148,11 @@ def get_LV_volume(base_vertices, N, labels_list):
         if distance_h_2_apex_cordis <= distance_m_2_apex_cordis:
             x_left1, y_left1 = x_ap, y_ap
             x_left2, y_left2 = x_mid, y_mid
-            for label in Left_labels_by_middle[1:-1]:
+            for label in Left_labels_by_middle:
                 x, y = label
                 cos_theta_1 = np.dot([x_left1 - x_h, y_left1 - y_h], [x_ap - x_h, y_ap - y_h]) / ( math.sqrt( (x_left1 - x_h)**2 + (y_left1 - y_h)**2 ) * math.sqrt( (x_ap - x_h)**2 + (y_ap - y_h)**2 ) )
                 cos_theta_2 = np.dot([x_left2 - x_h, y_left2 - y_h], [x_ap - x_h, y_ap - y_h]) / ( math.sqrt( (x_left2 - x_h)**2 + (y_left2 - y_h)**2 ) * math.sqrt( (x_ap - x_h)**2 + (y_ap - y_h)**2 ) )
                 cos_theta_label = np.dot([x - x_h, y - y_h], [x_ap - x_h, y_ap - y_h]) / ( math.sqrt( (x - x_h)**2 + (y - y_h)**2 ) * math.sqrt( (x_ap - x_h)**2 + (y_ap - y_h)**2 ) )
-
-                if (cos_theta_label >= 0) * (cos_theta_label < cos_theta_1):
-                    Left_labels_by_middle.remove([x_left1, y_left1])
 
                 x_left1 = x * (cos_theta_label >= 0) * (cos_theta_label < cos_theta_1) + x_left1 * (1- (cos_theta_label >= 0) * (cos_theta_label < cos_theta_1))
                 y_left1 = y * (cos_theta_label >= 0) * (cos_theta_label < cos_theta_1) + y_left1 * (1- (cos_theta_label >= 0) * (cos_theta_label < cos_theta_1))
@@ -174,14 +171,11 @@ def get_LV_volume(base_vertices, N, labels_list):
 
             x_right1, y_right1 = x_ap, y_ap
             x_right2, y_right2 = x_mid, y_mid
-            for label in Right_labels_by_middle[1:-1]:
+            for label in Right_labels_by_middle:
                 x, y = label
                 cos_theta_1 = np.dot([x_right1 - x_h, y_right1 - y_h], [x_ap - x_h, y_ap - y_h]) / ( math.sqrt( (x_right1 - x_h)**2 + (y_right1 - y_h)**2 ) * math.sqrt( (x_ap - x_h)**2 + (y_ap - y_h)**2 ) )
                 cos_theta_2 = np.dot([x_right2 - x_h, y_right2 - y_h], [x_ap - x_h, y_ap - y_h]) / ( math.sqrt( (x_right2 - x_h)**2 + (y_right2 - y_h)**2 ) * math.sqrt( (x_ap - x_h)**2 + (y_ap - y_h)**2 ) )
                 cos_theta_label = np.dot([x - x_h, y - y_h], [x_ap - x_h, y_ap - y_h]) / ( math.sqrt( (x - x_h)**2 + (y - y_h)**2 ) * math.sqrt( (x_ap - x_h)**2 + (y_ap - y_h)**2 ) )
-
-                if (cos_theta_label >= 0) * (cos_theta_label < cos_theta_1):
-                    Right_labels_by_middle.remove([x_right1, y_right1])
 
                 x_right1 = x * (cos_theta_label >= 0) * (cos_theta_label < cos_theta_1) + x_right1 * (1 - (cos_theta_label >= 0) * (cos_theta_label < cos_theta_1))
                 y_right1 = y * (cos_theta_label >= 0) * (cos_theta_label < cos_theta_1) + y_right1 * (1 - (cos_theta_label >= 0) * (cos_theta_label < cos_theta_1))
@@ -227,9 +221,6 @@ def get_LV_volume(base_vertices, N, labels_list):
                     cos_theta_2 = np.dot([x_left2 - x_h, y_left2 - y_h], [x_ap - x_h, y_ap - y_h]) / ( math.sqrt( (x_left2 - x_h)**2 + (y_left2 - y_h)**2 ) * math.sqrt( (x_ap - x_h)**2 + (y_ap - y_h)**2 ) )
                     cos_theta_label = np.dot([x - x_h, y - y_h], [x_ap - x_h, y_ap - y_h]) / ( math.sqrt( (x - x_h)**2 + (y - y_h)**2 ) * math.sqrt( (x_ap - x_h)**2 + (y_ap - y_h)**2 ) )
 
-                    if (cos_theta_label >= 0) * (cos_theta_label < cos_theta_1):
-                        Left_labels_rest.remove([x_left1, y_left1])
-
                     x_left1 = x * (cos_theta_label >= 0) * (cos_theta_label < cos_theta_1) + x_left1 * (1- (cos_theta_label >= 0) * (cos_theta_label < cos_theta_1))
                     y_left1 = y * (cos_theta_label >= 0) * (cos_theta_label < cos_theta_1) + y_left1 * (1- (cos_theta_label >= 0) * (cos_theta_label < cos_theta_1))
 
@@ -252,9 +243,6 @@ def get_LV_volume(base_vertices, N, labels_list):
                     cos_theta_1 = np.dot([x_right1 - x_h, y_right1 - y_h], [x_ap - x_h, y_ap - y_h]) / ( math.sqrt( (x_right1 - x_h)**2 + (y_right1 - y_h)**2 ) * math.sqrt( (x_ap - x_h)**2 + (y_ap - y_h)**2 ) )
                     cos_theta_2 = np.dot([x_right2 - x_h, y_right2 - y_h], [x_ap - x_h, y_ap - y_h]) / ( math.sqrt( (x_right2 - x_h)**2 + (y_right2 - y_h)**2 ) * math.sqrt( (x_ap - x_h)**2 + (y_ap - y_h)**2 ) )
                     cos_theta_label = np.dot([x - x_h, y - y_h], [x_ap - x_h, y_ap - y_h]) / ( math.sqrt( (x - x_h)**2 + (y - y_h)**2 ) * math.sqrt( (x_ap - x_h)**2 + (y_ap - y_h)**2 ) )
-
-                    if (cos_theta_label >= 0) * (cos_theta_label < cos_theta_1):
-                        Right_labels_by_middle.remove([x_right1, y_right1])
 
                     x_right1 = x * (cos_theta_label >= 0) * (cos_theta_label < cos_theta_1) + x_right1 * (1 - (cos_theta_label >= 0) * (cos_theta_label < cos_theta_1))
                     y_right1 = y * (cos_theta_label >= 0) * (cos_theta_label < cos_theta_1) + y_right1 * (1 - (cos_theta_label >= 0) * (cos_theta_label < cos_theta_1))
@@ -297,9 +285,6 @@ def get_LV_volume(base_vertices, N, labels_list):
                     cos_theta_2 = np.dot([x_left2 - x_h, y_left2 - y_h], [x_ap - x_h, y_ap - y_h]) / ( math.sqrt( (x_left2 - x_h)**2 + (y_left2 - y_h)**2 ) * math.sqrt( (x_ap - x_h)**2 + (y_ap - y_h)**2 ) )
                     cos_theta_label = np.dot([x - x_h, y - y_h], [x_ap - x_h, y_ap - y_h]) / ( math.sqrt( (x - x_h)**2 + (y - y_h)**2 ) * math.sqrt( (x_ap - x_h)**2 + (y_ap - y_h)**2 ) )
 
-                    if (cos_theta_label >= 0) * (cos_theta_label < cos_theta_1):
-                        Left_labels_rest.remove([x_left1, y_left1])
-
                     x_left1 = x * (cos_theta_label >= 0) * (cos_theta_label < cos_theta_1) + x_left1 * (1- (cos_theta_label >= 0) * (cos_theta_label < cos_theta_1))
                     y_left1 = y * (cos_theta_label >= 0) * (cos_theta_label < cos_theta_1) + y_left1 * (1- (cos_theta_label >= 0) * (cos_theta_label < cos_theta_1))
 
@@ -322,9 +307,6 @@ def get_LV_volume(base_vertices, N, labels_list):
                     cos_theta_1 = np.dot([x_right1 - x_h, y_right1 - y_h], [x_ap - x_h, y_ap - y_h]) / ( math.sqrt( (x_right1 - x_h)**2 + (y_right1 - y_h)**2 ) * math.sqrt( (x_ap - x_h)**2 + (y_ap - y_h)**2 ) )
                     cos_theta_2 = np.dot([x_right2 - x_h, y_right2 - y_h], [x_ap - x_h, y_ap - y_h]) / ( math.sqrt( (x_right2 - x_h)**2 + (y_right2 - y_h)**2 ) * math.sqrt( (x_ap - x_h)**2 + (y_ap - y_h)**2 ) )
                     cos_theta_label = np.dot([x - x_h, y - y_h], [x_ap - x_h, y_ap - y_h]) / ( math.sqrt( (x - x_h)**2 + (y - y_h)**2 ) * math.sqrt( (x_ap - x_h)**2 + (y_ap - y_h)**2 ) )
-
-                    if (cos_theta_label >= 0) * (cos_theta_label < cos_theta_1):
-                        Right_labels_by_middle.remove([x_right1, y_right1])
 
                     x_right1 = x * (cos_theta_label >= 0) * (cos_theta_label < cos_theta_1) + x_right1 * (1 - (cos_theta_label >= 0) * (cos_theta_label < cos_theta_1))
                     y_right1 = y * (cos_theta_label >= 0) * (cos_theta_label < cos_theta_1) + y_right1 * (1 - (cos_theta_label >= 0) * (cos_theta_label < cos_theta_1))
