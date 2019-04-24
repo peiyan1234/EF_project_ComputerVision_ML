@@ -150,18 +150,18 @@ def get_LV_volume(base_vertices, N, labels_list):
             x_left2, y_left2 = x_mid, y_mid
             for label in Left_labels_by_middle:
                 x, y = label
-                cos_theta_1 = np.dot([x_left1 - x_h, y_left1 - y_h], [x_ap - x_h, y_ap - y_h]) / ( math.sqrt( (x_left1 - x_h)**2 + (y_left1 - y_h)**2 ) * math.sqrt( (x_ap - x_h)**2 + (y_ap - y_h)**2 ) )
-                cos_theta_2 = np.dot([x_left2 - x_h, y_left2 - y_h], [x_ap - x_h, y_ap - y_h]) / ( math.sqrt( (x_left2 - x_h)**2 + (y_left2 - y_h)**2 ) * math.sqrt( (x_ap - x_h)**2 + (y_ap - y_h)**2 ) )
-                cos_theta_label = np.dot([x - x_h, y - y_h], [x_ap - x_h, y_ap - y_h]) / ( math.sqrt( (x - x_h)**2 + (y - y_h)**2 ) * math.sqrt( (x_ap - x_h)**2 + (y_ap - y_h)**2 ) )
+                cos_theta_1 = get_cos_theta(x_left1, y_left1, x_ap, y_ap, x_h, y_h)
+                cos_theta_2 = get_cos_theta(x_left2, y_left2, x_ap, y_ap, x_h, y_h)
+                cos_theta_label = get_cos_theta(x, y, x_ap, y_ap, x_h, y_h)
 
                 x_left1 = x * (cos_theta_label >= 0) * (cos_theta_label < cos_theta_1) + x_left1 * (1- (cos_theta_label >= 0) * (cos_theta_label < cos_theta_1))
                 y_left1 = y * (cos_theta_label >= 0) * (cos_theta_label < cos_theta_1) + y_left1 * (1- (cos_theta_label >= 0) * (cos_theta_label < cos_theta_1))
 
-                x_left2 = x * (cos_theta_label <= 0) * (cos_theta_label > cos_theta_2) + x_left2 * (1 - (cos_theta_label <= 0) * (cos_theta_label > cos_theta_2))
-                y_left2 = y * (cos_theta_label <= 0) * (cos_theta_label > cos_theta_2) + y_left2 * (1 - (cos_theta_label <= 0) * (cos_theta_label > cos_theta_2))
+                x_left2 = x * (cos_theta_label < 0) * (cos_theta_label > cos_theta_2) + x_left2 * (1 - (cos_theta_label < 0) * (cos_theta_label > cos_theta_2))
+                y_left2 = y * (cos_theta_label < 0) * (cos_theta_label > cos_theta_2) + y_left2 * (1 - (cos_theta_label < 0) * (cos_theta_label > cos_theta_2))
                 
             checker1 = (x_left2 == x_left1) * (y_left2 == y_left1)
-            if checker1 == 0:
+            if checker1 == 1:
                 x_left = x_left1
                 y_left = y_left1
             else:
@@ -173,18 +173,18 @@ def get_LV_volume(base_vertices, N, labels_list):
             x_right2, y_right2 = x_mid, y_mid
             for label in Right_labels_by_middle:
                 x, y = label
-                cos_theta_1 = np.dot([x_right1 - x_h, y_right1 - y_h], [x_ap - x_h, y_ap - y_h]) / ( math.sqrt( (x_right1 - x_h)**2 + (y_right1 - y_h)**2 ) * math.sqrt( (x_ap - x_h)**2 + (y_ap - y_h)**2 ) )
-                cos_theta_2 = np.dot([x_right2 - x_h, y_right2 - y_h], [x_ap - x_h, y_ap - y_h]) / ( math.sqrt( (x_right2 - x_h)**2 + (y_right2 - y_h)**2 ) * math.sqrt( (x_ap - x_h)**2 + (y_ap - y_h)**2 ) )
-                cos_theta_label = np.dot([x - x_h, y - y_h], [x_ap - x_h, y_ap - y_h]) / ( math.sqrt( (x - x_h)**2 + (y - y_h)**2 ) * math.sqrt( (x_ap - x_h)**2 + (y_ap - y_h)**2 ) )
+                cos_theta_1 = get_cos_theta(x_right1, y_right1, x_ap, y_ap, x_h, y_h)
+                cos_theta_2 = get_cos_theta(x_right2, y_right2, x_ap, y_ap, x_h, y_h)
+                cos_theta_label = get_cos_theta(x, y, x_ap, y_ap, x_h, y_h)
 
                 x_right1 = x * (cos_theta_label >= 0) * (cos_theta_label < cos_theta_1) + x_right1 * (1 - (cos_theta_label >= 0) * (cos_theta_label < cos_theta_1))
                 y_right1 = y * (cos_theta_label >= 0) * (cos_theta_label < cos_theta_1) + y_right1 * (1 - (cos_theta_label >= 0) * (cos_theta_label < cos_theta_1))
 
-                x_right2 = x * (cos_theta_label <= 0) * (cos_theta_label > cos_theta_2) + x_right2 * (1 - (cos_theta_label <= 0) * (cos_theta_label > cos_theta_2))
-                y_right2 = y * (cos_theta_label <= 0) * (cos_theta_label > cos_theta_2) + y_right2 * (1 - (cos_theta_label <= 0) * (cos_theta_label > cos_theta_2))
+                x_right2 = x * (cos_theta_label < 0) * (cos_theta_label > cos_theta_2) + x_right2 * (1 - (cos_theta_label < 0) * (cos_theta_label > cos_theta_2))
+                y_right2 = y * (cos_theta_label < 0) * (cos_theta_label > cos_theta_2) + y_right2 * (1 - (cos_theta_label < 0) * (cos_theta_label > cos_theta_2))
             
             checker2 = (x_right2 == x_right1) * (y_right2 == y_right1)
-            if checker2 == 0:
+            if checker2 == 1:
                 x_right = x_right1
                 y_right = y_right1
             else:
@@ -212,14 +212,18 @@ def get_LV_volume(base_vertices, N, labels_list):
                         Left_labels_rest.append(label)
                     elif x_label > (K_b1*y_label + C_b1):
                         Right_labels_rest.append(label)
+                                
+                                
+                Left_labels_rest =  Left_labels_rest + [base_vertices[1]]
+                Right_labels_rest = [base_vertices[1]] + Right_labels_rest
                 
                 x_left1, y_left1 = x_ap, y_ap
-                x_left2, y_left2 = x_L, y_L
+                x_left2, y_left2 = 2*x_L - x_ap, 2*y_L -y_ap
                 for label in Left_labels_rest:
                     x, y = label
-                    cos_theta_1 = np.dot([x_left1 - x_h, y_left1 - y_h], [x_ap - x_h, y_ap - y_h]) / ( math.sqrt( (x_left1 - x_h)**2 + (y_left1 - y_h)**2 ) * math.sqrt( (x_ap - x_h)**2 + (y_ap - y_h)**2 ) )
-                    cos_theta_2 = np.dot([x_left2 - x_h, y_left2 - y_h], [x_ap - x_h, y_ap - y_h]) / ( math.sqrt( (x_left2 - x_h)**2 + (y_left2 - y_h)**2 ) * math.sqrt( (x_ap - x_h)**2 + (y_ap - y_h)**2 ) )
-                    cos_theta_label = np.dot([x - x_h, y - y_h], [x_ap - x_h, y_ap - y_h]) / ( math.sqrt( (x - x_h)**2 + (y - y_h)**2 ) * math.sqrt( (x_ap - x_h)**2 + (y_ap - y_h)**2 ) )
+                    cos_theta_1 = get_cos_theta(x_left1, y_left1, x_ap, y_ap, x_h, y_h)
+                    cos_theta_2 = get_cos_theta(x_left2, y_left2, x_ap, y_ap, x_h, y_h)
+                    cos_theta_label = get_cos_theta(x, y, x_ap, y_ap, x_h, y_h)
 
                     x_left1 = x * (cos_theta_label >= 0) * (cos_theta_label < cos_theta_1) + x_left1 * (1- (cos_theta_label >= 0) * (cos_theta_label < cos_theta_1))
                     y_left1 = y * (cos_theta_label >= 0) * (cos_theta_label < cos_theta_1) + y_left1 * (1- (cos_theta_label >= 0) * (cos_theta_label < cos_theta_1))
@@ -228,7 +232,7 @@ def get_LV_volume(base_vertices, N, labels_list):
                     y_left2 = y * (cos_theta_label <= 0) * (cos_theta_label > cos_theta_2) + y_left2 * (1 - (cos_theta_label <= 0) * (cos_theta_label > cos_theta_2))
                 
                 checker1 = (x_left2 == x_left1) * (y_left2 == y_left1)
-                if checker1 == 0:
+                if checker1 == 1:
                     x_left = x_left1
                     y_left = y_left1
                 else:
@@ -237,9 +241,13 @@ def get_LV_volume(base_vertices, N, labels_list):
                     y_left = y_left1 + (y_left2 - y_left1) * t
 
                 x_right1, y_right1 = x_ap, y_ap
-                x_right2, y_right2 = x_L, y_L
+                x_right2, y_right2 = 2*x_L - x_ap, 2*y_L -y_ap
                 for label in Right_labels_rest:
                     x, y = label
+                    cos_theta_1 = get_cos_theta(x_right1, y_right1, x_ap, y_ap, x_h, y_h)
+                    cos_theta_2 = get_cos_theta(x_right2, y_right2, x_ap, y_ap, x_h, y_h)
+                    cos_theta_label = get_cos_theta(x, y, x_ap, y_ap, x_h, y_h)
+
                     cos_theta_1 = np.dot([x_right1 - x_h, y_right1 - y_h], [x_ap - x_h, y_ap - y_h]) / ( math.sqrt( (x_right1 - x_h)**2 + (y_right1 - y_h)**2 ) * math.sqrt( (x_ap - x_h)**2 + (y_ap - y_h)**2 ) )
                     cos_theta_2 = np.dot([x_right2 - x_h, y_right2 - y_h], [x_ap - x_h, y_ap - y_h]) / ( math.sqrt( (x_right2 - x_h)**2 + (y_right2 - y_h)**2 ) * math.sqrt( (x_ap - x_h)**2 + (y_ap - y_h)**2 ) )
                     cos_theta_label = np.dot([x - x_h, y - y_h], [x_ap - x_h, y_ap - y_h]) / ( math.sqrt( (x - x_h)**2 + (y - y_h)**2 ) * math.sqrt( (x_ap - x_h)**2 + (y_ap - y_h)**2 ) )
@@ -251,7 +259,7 @@ def get_LV_volume(base_vertices, N, labels_list):
                     y_right2 = y * (cos_theta_label <= 0) * (cos_theta_label > cos_theta_2) + y_right2 * (1 - (cos_theta_label <= 0) * (cos_theta_label > cos_theta_2))
 
                 checker2 = (x_right2 == x_right1) * (y_right2 == y_right1)
-                if checker2 == 0:
+                if checker2 == 1:
                     x_right = x_right1
                     y_right = y_right1
                 else:
@@ -278,12 +286,12 @@ def get_LV_volume(base_vertices, N, labels_list):
                 Right_labels_rest = Right_labels_rest + [base_vertices[2]]
 
                 x_left1, y_left1 = x_ap, y_ap
-                x_left2, y_left2 = x_L, y_L
+                x_left2, y_left2 = 2*x_L - x_ap, 2*y_L -y_ap
                 for label in Left_labels_rest:
                     x, y = label
-                    cos_theta_1 = np.dot([x_left1 - x_h, y_left1 - y_h], [x_ap - x_h, y_ap - y_h]) / ( math.sqrt( (x_left1 - x_h)**2 + (y_left1 - y_h)**2 ) * math.sqrt( (x_ap - x_h)**2 + (y_ap - y_h)**2 ) )
-                    cos_theta_2 = np.dot([x_left2 - x_h, y_left2 - y_h], [x_ap - x_h, y_ap - y_h]) / ( math.sqrt( (x_left2 - x_h)**2 + (y_left2 - y_h)**2 ) * math.sqrt( (x_ap - x_h)**2 + (y_ap - y_h)**2 ) )
-                    cos_theta_label = np.dot([x - x_h, y - y_h], [x_ap - x_h, y_ap - y_h]) / ( math.sqrt( (x - x_h)**2 + (y - y_h)**2 ) * math.sqrt( (x_ap - x_h)**2 + (y_ap - y_h)**2 ) )
+                    cos_theta_1 = get_cos_theta(x_left1, y_left1, x_ap, y_ap, x_h, y_h)
+                    cos_theta_2 = get_cos_theta(x_left2, y_left2, x_ap, y_ap, x_h, y_h)
+                    cos_theta_label = get_cos_theta(x, y, x_ap, y_ap, x_h, y_h)
 
                     x_left1 = x * (cos_theta_label >= 0) * (cos_theta_label < cos_theta_1) + x_left1 * (1- (cos_theta_label >= 0) * (cos_theta_label < cos_theta_1))
                     y_left1 = y * (cos_theta_label >= 0) * (cos_theta_label < cos_theta_1) + y_left1 * (1- (cos_theta_label >= 0) * (cos_theta_label < cos_theta_1))
@@ -292,7 +300,7 @@ def get_LV_volume(base_vertices, N, labels_list):
                     y_left2 = y * (cos_theta_label <= 0) * (cos_theta_label > cos_theta_2) + y_left2 * (1 - (cos_theta_label <= 0) * (cos_theta_label > cos_theta_2))
                 
                 checker1 = (x_left2 == x_left1) * (y_left2 - y_left1)
-                if checker1 == 0:
+                if checker1 == 1:
                     x_left = x_left1
                     y_left = y_left1
                 else:
@@ -301,12 +309,12 @@ def get_LV_volume(base_vertices, N, labels_list):
                     y_left = y_left1 + (y_left2 - y_left1) * t
 
                 x_right1, y_right1 = x_ap, y_ap
-                x_right2, y_right2 = x_L, y_L
+                x_right2, y_right2 = 2*x_L - x_ap, 2*y_L -y_ap
                 for label in Right_labels_rest:
                     x, y = label
-                    cos_theta_1 = np.dot([x_right1 - x_h, y_right1 - y_h], [x_ap - x_h, y_ap - y_h]) / ( math.sqrt( (x_right1 - x_h)**2 + (y_right1 - y_h)**2 ) * math.sqrt( (x_ap - x_h)**2 + (y_ap - y_h)**2 ) )
-                    cos_theta_2 = np.dot([x_right2 - x_h, y_right2 - y_h], [x_ap - x_h, y_ap - y_h]) / ( math.sqrt( (x_right2 - x_h)**2 + (y_right2 - y_h)**2 ) * math.sqrt( (x_ap - x_h)**2 + (y_ap - y_h)**2 ) )
-                    cos_theta_label = np.dot([x - x_h, y - y_h], [x_ap - x_h, y_ap - y_h]) / ( math.sqrt( (x - x_h)**2 + (y - y_h)**2 ) * math.sqrt( (x_ap - x_h)**2 + (y_ap - y_h)**2 ) )
+                    cos_theta_1 = get_cos_theta(x_right1, y_right1, x_ap, y_ap, x_h, y_h)
+                    cos_theta_2 = get_cos_theta(x_right2, y_right2, x_ap, y_ap, x_h, y_h)
+                    cos_theta_label = get_cos_theta(x, y, x_ap, y_ap, x_h, y_h)
 
                     x_right1 = x * (cos_theta_label >= 0) * (cos_theta_label < cos_theta_1) + x_right1 * (1 - (cos_theta_label >= 0) * (cos_theta_label < cos_theta_1))
                     y_right1 = y * (cos_theta_label >= 0) * (cos_theta_label < cos_theta_1) + y_right1 * (1 - (cos_theta_label >= 0) * (cos_theta_label < cos_theta_1))
@@ -315,7 +323,7 @@ def get_LV_volume(base_vertices, N, labels_list):
                     y_right2 = y * (cos_theta_label <= 0) * (cos_theta_label > cos_theta_2) + y_right2 * (1 - (cos_theta_label <= 0) * (cos_theta_label > cos_theta_2))
 
                 checker2 = (x_right2 == x_right1) * (y_right2 - y_right1)
-                if checker2 == 0:
+                if checker2 == 1:
                     x_right = x_right1
                     y_right = y_right1
                 else:
@@ -329,6 +337,10 @@ def get_LV_volume(base_vertices, N, labels_list):
                 LV_volume = LV_volume + math.pi * height * (distance_right_2_middle**2 - distance_left_2_middle**2)
 
     return LV_volume
+    
+def get_cos_theta(p1x, p1y, p2x, p2y, p3x, p3y):
+
+    return np.dot([p1x - p3x, p1y - p3y], [p2x - p3x, p2y - p3y]) / ( math.sqrt( (p1x - p3x)**2 + (p1y - p3y)**2 ) * math.sqrt( (p2x - p3x)**2 + (p2y - p3y)**2 ) )
 
 def get_segmented_line(base_vertices, N):
 
@@ -430,3 +442,4 @@ def get_sides_labels(base_vertices, labels_list):
     Right_labels_by_middle = Right_labels_b2 + [base_vertices[2]] + Left_labels_b2
 
     return Left_labels_by_middle, Right_labels_by_middle
+    
