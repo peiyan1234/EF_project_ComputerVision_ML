@@ -4,7 +4,7 @@ import glob
 import math
 import numpy as np
 from itertools import combinations
-from PIL import Image
+from PIL import Image, ImageDraw
 
 """
 This tool is developed by Alvin Pei-Yan, Li.
@@ -14,6 +14,7 @@ Email: Alvin.Li@acer.com / d05548014@ntu.edu.tw
 
 global apex_cordis # the coordinates of an apex cordis
 global base_vertices # a list of three points that will be used in Modified Simpson's Method later.
+N = 20 # the amount of disks for discretizely summing up the LV volume
 
 def Modified_Simpson_calculator(filename_json_dir):
 
@@ -21,7 +22,6 @@ def Modified_Simpson_calculator(filename_json_dir):
     largest_triangle = find_the_largest_triangle(labels_list)
     base_vertices = check_the_bottom_2_points(labels_list, largest_triangle)
 
-    N = 20 # the amount of disks for discretizely summing up the LV volume
     return get_LV_volume(base_vertices, N, labels_list)
 
 def get_labels(filename_json_dir):
@@ -134,7 +134,7 @@ def get_LV_volume(base_vertices, N, labels_list):
     x_mid = ( base_vertices[1][0] + base_vertices[2][0] ) / 2.0
     y_mid = ( base_vertices[1][1] + base_vertices[2][1] ) / 2.0
 
-    Left_labels_by_middle, Right_labels_by_middle = get_sides_labels(base_vertices, labels_list)
+    Left_labels_by_middle, Right_labels_by_middle, Left_labels_b1, Right_labels_b1, Right_labels_b2, Left_labels_b2, count_the_rest_left_labels, count_the_rest_right_labels = get_sides_labels(base_vertices, labels_list)
     
     LV_volume = 0
     for segment in range(0, len(list_segmented_N_x)-1):
@@ -193,7 +193,7 @@ def get_LV_volume(base_vertices, N, labels_list):
                 y_right = y_right1 + (y_right2 - y_right1) * t
 
             if distance_h_2_apex_cordis <= distance_l_2_apex_cordis:
-                LV_volume = LV_volume + math.pi * 0.25 * height * math.sqrt( (x_left - x_right)**2 + (y_left - y_right)**2 )
+                LV_volume = LV_volume + math.pi * 0.25 * height * ( math.sqrt( (x_left - x_right)**2 + (y_left - y_right)**2 ) )**2
             
             elif (distance_h_2_apex_cordis > distance_l_2_apex_cordis) * (distance_h_2_apex_cordis <= distance_m_2_apex_cordis):   
                 distance_left_2_middle = math.sqrt( (x_left - x_h)**2 + (y_left - y_h)**2 )
@@ -203,7 +203,7 @@ def get_LV_volume(base_vertices, N, labels_list):
                 LV_volume = LV_volume + (math.pi * height * distance_left_2_middle**2) * checker_longest + (math.pi * height * distance_right_2_middle**2) * (1 - checker_longest)
 
         elif distance_h_2_apex_cordis > distance_m_2_apex_cordis:
-            if len(Left_labels_by_middle) >= len(Right_labels_by_middle):
+            if count_the_rest_left_labels >= count_the_rest_right_labels:
                 Left_labels_rest = []
                 Right_labels_rest = []
                 for label in Left_labels_by_middle:
@@ -215,9 +215,9 @@ def get_LV_volume(base_vertices, N, labels_list):
                                 
                                 
                 Left_labels_rest =  Left_labels_rest + [base_vertices[1]]
-                Right_labels_rest = [base_vertices[1]] + Right_labels_rest
+                Right_labels_rest = Right_labels_rest + [base_vertices[1]]
                 
-                x_left1, y_left1 = x_ap, y_ap
+                x_left1, y_left1 = x_mid, y_mid
                 x_left2, y_left2 = 2*x_L - x_ap, 2*y_L -y_ap
                 for label in Left_labels_rest:
                     x, y = label
@@ -240,7 +240,7 @@ def get_LV_volume(base_vertices, N, labels_list):
                     x_left = x_left1 + (x_left2 - x_left1) * t
                     y_left = y_left1 + (y_left2 - y_left1) * t
 
-                x_right1, y_right1 = x_ap, y_ap
+                x_right1, y_right1 = x_mid, y_mid
                 x_right2, y_right2 = 2*x_L - x_ap, 2*y_L -y_ap
                 for label in Right_labels_rest:
                     x, y = label
@@ -282,10 +282,10 @@ def get_LV_volume(base_vertices, N, labels_list):
                     elif x_label > (K_b2*y_label + C_b2):
                         Right_labels_rest.append(label)
 
-                Left_labels_rest = [base_vertices[2]] + Left_labels_rest
+                Left_labels_rest = Left_labels_rest + [base_vertices[2]]
                 Right_labels_rest = Right_labels_rest + [base_vertices[2]]
 
-                x_left1, y_left1 = x_ap, y_ap
+                x_left1, y_left1 = x_mid, y_mid
                 x_left2, y_left2 = 2*x_L - x_ap, 2*y_L -y_ap
                 for label in Left_labels_rest:
                     x, y = label
@@ -299,7 +299,7 @@ def get_LV_volume(base_vertices, N, labels_list):
                     x_left2 = x * (cos_theta_label <= 0) * (cos_theta_label > cos_theta_2) + x_left2 * (1 - (cos_theta_label <= 0) * (cos_theta_label > cos_theta_2))
                     y_left2 = y * (cos_theta_label <= 0) * (cos_theta_label > cos_theta_2) + y_left2 * (1 - (cos_theta_label <= 0) * (cos_theta_label > cos_theta_2))
                 
-                checker1 = (x_left2 == x_left1) * (y_left2 - y_left1)
+                checker1 = (x_left2 == x_left1) * (y_left2 == y_left1)
                 if checker1 == 1:
                     x_left = x_left1
                     y_left = y_left1
@@ -308,7 +308,7 @@ def get_LV_volume(base_vertices, N, labels_list):
                     x_left = x_left1 + (x_left2 - x_left1) * t
                     y_left = y_left1 + (y_left2 - y_left1) * t
 
-                x_right1, y_right1 = x_ap, y_ap
+                x_right1, y_right1 = x_mid, y_mid
                 x_right2, y_right2 = 2*x_L - x_ap, 2*y_L -y_ap
                 for label in Right_labels_rest:
                     x, y = label
@@ -322,7 +322,7 @@ def get_LV_volume(base_vertices, N, labels_list):
                     x_right2 = x * (cos_theta_label <= 0) * (cos_theta_label > cos_theta_2) + x_right2 * (1 - (cos_theta_label <= 0) * (cos_theta_label > cos_theta_2))
                     y_right2 = y * (cos_theta_label <= 0) * (cos_theta_label > cos_theta_2) + y_right2 * (1 - (cos_theta_label <= 0) * (cos_theta_label > cos_theta_2))
 
-                checker2 = (x_right2 == x_right1) * (y_right2 - y_right1)
+                checker2 = (x_right2 == x_right1) * (y_right2 == y_right1)
                 if checker2 == 1:
                     x_right = x_right1
                     y_right = y_right1
@@ -403,6 +403,8 @@ def get_sides_labels(base_vertices, labels_list):
     x_mid = ( base_vertices[1][0] + base_vertices[2][0] ) / 2.0
     y_mid = ( base_vertices[1][1] + base_vertices[2][1] ) / 2.0
 
+    distance_m_2_apex_cordis = math.sqrt( (x_mid - x_ap)**2 + (y_mid - y_ap)**2 )
+
     Left_labels_for_sort = []
     Right_labels_for_sort = []
     for label in labels_list:
@@ -416,6 +418,19 @@ def get_sides_labels(base_vertices, labels_list):
     
     Left_labels_sorted = sorted(Left_labels_for_sort, key = lambda point:point[1])
     Right_labels_sorted = sorted(Right_labels_for_sort, key = lambda point:point[1])
+
+    count_the_rest_left_labels = 0
+    for element in range(0, len(Left_labels_sorted)):
+        label, distance_left_2_apex_cordis = Left_labels_sorted[element]
+        if distance_left_2_apex_cordis >= distance_m_2_apex_cordis:
+            count_the_rest_left_labels += 1
+
+    count_the_rest_right_labels = 0
+    for element in range(0, len(Right_labels_sorted)):
+        label, distance_right_2_apex_cordis = Right_labels_sorted[element]
+        if distance_right_2_apex_cordis >= distance_m_2_apex_cordis:
+            count_the_rest_right_labels += 1
+
 
     Left_labels_b1 = []
     Right_labels_b1 = []
@@ -441,5 +456,267 @@ def get_sides_labels(base_vertices, labels_list):
 
     Right_labels_by_middle = Right_labels_b2 + [base_vertices[2]] + Left_labels_b2
 
-    return Left_labels_by_middle, Right_labels_by_middle
+    return Left_labels_by_middle, Right_labels_by_middle, Left_labels_b1, Right_labels_b1, Right_labels_b2, Left_labels_b2, count_the_rest_left_labels, count_the_rest_right_labels
+
+def draw_on_picture(filename_json_dir, filename_png_dir):
+
+    #filename_json_dir = 'H65138_20181210110344-051.json' 
+    #filename_png_dir = 'H65138_20181210110344-051.png'
+    labels_list = get_labels(filename_json_dir)
+    largest_triangle = find_the_largest_triangle(labels_list)
+    base_vertices = check_the_bottom_2_points(labels_list, largest_triangle)
+
+    list_segmented_N_x, list_segmented_N_y, x_l, y_l, x_L, y_L, height = get_segmented_line(base_vertices, N)
+    Left_labels_by_middle, Right_labels_by_middle, Left_labels_b1, Right_labels_b1, Right_labels_b2, Left_labels_b2, count_the_rest_left_labels, count_the_rest_right_labels = get_sides_labels(base_vertices, labels_list)
+
+    img = Image.open(filename_png_dir)
+    draw = ImageDraw.Draw(img)
+
+    draw_base_vertics_list = []
+    for point in base_vertices:
+        x, y = point
+        draw_base_vertics_list.append((x, y))
+    draw_base_vertics_list.append(draw_base_vertics_list[0])
+
+    draw.line(draw_base_vertics_list, fill = (255, 0, 0), width = 1)
     
+    draw_labels_list = []
+    for label in labels_list:
+        x, y = label
+        draw_labels_list.append((x, y))
+    draw_labels_list.append(draw_labels_list[0])
+
+    line_color = (0, 0, 255)
+
+    draw.line(draw_labels_list, fill = line_color, width = 1)
+
+    draw_middle_lint_list = list(zip(list_segmented_N_x, list_segmented_N_y))
+    
+    line_color = (0, 255, 0)
+
+    draw.line(draw_middle_lint_list, fill = line_color, width = 1)
+    #img.show()
+
+    K, C, K_b1, C_b1, K_b2, C_b2 = get_distinguish_parameters(base_vertices)
+
+    x_ap, y_ap = base_vertices[0]
+    x_mid = ( base_vertices[1][0] + base_vertices[2][0] ) / 2.0
+    y_mid = ( base_vertices[1][1] + base_vertices[2][1] ) / 2.0
+
+    for segment in range(0, len(list_segmented_N_x)-1):
+        x_h = list_segmented_N_x[segment + 1]
+        y_h = list_segmented_N_y[segment + 1]
+        
+        distance_h_2_apex_cordis = math.sqrt( (x_h - x_ap)**2 + (y_h - y_ap)**2 )
+        distance_l_2_apex_cordis = math.sqrt( (x_l - x_ap)**2 + (y_l - y_ap)**2 )
+        distance_m_2_apex_cordis = math.sqrt( (x_mid - x_ap)**2 + (y_mid - y_ap)**2 )
+
+        if distance_h_2_apex_cordis <= distance_m_2_apex_cordis:
+            x_left1, y_left1 = x_ap, y_ap
+            x_left2, y_left2 = x_mid, y_mid
+            for label in Left_labels_by_middle:
+                x, y = label
+                cos_theta_1 = get_cos_theta(x_left1, y_left1, x_ap, y_ap, x_h, y_h)
+                cos_theta_2 = get_cos_theta(x_left2, y_left2, x_ap, y_ap, x_h, y_h)
+                cos_theta_label = get_cos_theta(x, y, x_ap, y_ap, x_h, y_h)
+
+                x_left1 = x * (cos_theta_label >= 0) * (cos_theta_label < cos_theta_1) + x_left1 * (1- (cos_theta_label >= 0) * (cos_theta_label < cos_theta_1))
+                y_left1 = y * (cos_theta_label >= 0) * (cos_theta_label < cos_theta_1) + y_left1 * (1- (cos_theta_label >= 0) * (cos_theta_label < cos_theta_1))
+
+                x_left2 = x * (cos_theta_label < 0) * (cos_theta_label > cos_theta_2) + x_left2 * (1 - (cos_theta_label < 0) * (cos_theta_label > cos_theta_2))
+                y_left2 = y * (cos_theta_label < 0) * (cos_theta_label > cos_theta_2) + y_left2 * (1 - (cos_theta_label < 0) * (cos_theta_label > cos_theta_2))
+                
+            checker1 = (x_left2 == x_left1) * (y_left2 == y_left1)
+            if checker1 == 1:
+                x_left = x_left1
+                y_left = y_left1
+            else:
+                t = np.dot([x_h - x_left1, y_h - y_left1], [x_ap - x_h, y_ap - y_h]) / np.dot([x_left2 - x_left1, y_left2 - y_left1], [x_ap - x_h, y_ap - y_h])
+                x_left = x_left1 + (x_left2 - x_left1) * t
+                y_left = y_left1 + (y_left2 - y_left1) * t
+
+            x_right1, y_right1 = x_ap, y_ap
+            x_right2, y_right2 = x_mid, y_mid
+            for label in Right_labels_by_middle:
+                x, y = label
+                cos_theta_1 = get_cos_theta(x_right1, y_right1, x_ap, y_ap, x_h, y_h)
+                cos_theta_2 = get_cos_theta(x_right2, y_right2, x_ap, y_ap, x_h, y_h)
+                cos_theta_label = get_cos_theta(x, y, x_ap, y_ap, x_h, y_h)
+
+                x_right1 = x * (cos_theta_label >= 0) * (cos_theta_label < cos_theta_1) + x_right1 * (1 - (cos_theta_label >= 0) * (cos_theta_label < cos_theta_1))
+                y_right1 = y * (cos_theta_label >= 0) * (cos_theta_label < cos_theta_1) + y_right1 * (1 - (cos_theta_label >= 0) * (cos_theta_label < cos_theta_1))
+
+                x_right2 = x * (cos_theta_label < 0) * (cos_theta_label > cos_theta_2) + x_right2 * (1 - (cos_theta_label < 0) * (cos_theta_label > cos_theta_2))
+                y_right2 = y * (cos_theta_label < 0) * (cos_theta_label > cos_theta_2) + y_right2 * (1 - (cos_theta_label < 0) * (cos_theta_label > cos_theta_2))
+            
+            checker2 = (x_right2 == x_right1) * (y_right2 == y_right1)
+            if checker2 == 1:
+                x_right = x_right1
+                y_right = y_right1
+            else:
+                t = np.dot([x_h - x_right1, y_h - y_right1], [x_ap - x_h, y_ap - y_h]) / np.dot([x_right2 - x_right1, y_right2 - y_right1], [x_ap - x_h, y_ap - y_h])
+                x_right = x_right1 + (x_right2 - x_right1) * t
+                y_right = y_right1 + (y_right2 - y_right1) * t
+
+            draw.line([(x_left, y_left), (x_right, y_right)], fill = line_color, width = 1)
+
+        elif distance_h_2_apex_cordis > distance_m_2_apex_cordis:
+            if count_the_rest_left_labels >= count_the_rest_right_labels:
+                Left_labels_rest = []
+                Right_labels_rest = []
+                for label in Left_labels_by_middle:
+                    x_label, y_label = label
+                    if x_label < (K_b1*y_label + C_b1):
+                        Left_labels_rest.append(label)
+                    elif x_label > (K_b1*y_label + C_b1):
+                        Right_labels_rest.append(label)
+                                
+                                
+                Left_labels_rest =  Left_labels_rest + [base_vertices[1]]
+                Right_labels_rest = Right_labels_rest + [base_vertices[1]]
+                
+                x_left1, y_left1 = x_mid, y_mid
+                x_left2, y_left2 = 2*x_L - x_ap, 2*y_L -y_ap
+                for label in Left_labels_rest:
+                    x, y = label
+                    cos_theta_1 = get_cos_theta(x_left1, y_left1, x_ap, y_ap, x_h, y_h)
+                    cos_theta_2 = get_cos_theta(x_left2, y_left2, x_ap, y_ap, x_h, y_h)
+                    cos_theta_label = get_cos_theta(x, y, x_ap, y_ap, x_h, y_h)
+
+                    x_left1 = x * (cos_theta_label >= 0) * (cos_theta_label < cos_theta_1) + x_left1 * (1- (cos_theta_label >= 0) * (cos_theta_label < cos_theta_1))
+                    y_left1 = y * (cos_theta_label >= 0) * (cos_theta_label < cos_theta_1) + y_left1 * (1- (cos_theta_label >= 0) * (cos_theta_label < cos_theta_1))
+
+                    x_left2 = x * (cos_theta_label <= 0) * (cos_theta_label > cos_theta_2) + x_left2 * (1 - (cos_theta_label <= 0) * (cos_theta_label > cos_theta_2))
+                    y_left2 = y * (cos_theta_label <= 0) * (cos_theta_label > cos_theta_2) + y_left2 * (1 - (cos_theta_label <= 0) * (cos_theta_label > cos_theta_2))
+                
+                checker1 = (x_left2 == x_left1) * (y_left2 == y_left1)
+                if checker1 == 1:
+                    x_left = x_left1
+                    y_left = y_left1
+                else:
+                    t = np.dot([x_h - x_left1, y_h - y_left1], [x_ap - x_h, y_ap - y_h]) / np.dot([x_left2 - x_left1, y_left2 - y_left1], [x_ap - x_h, y_ap - y_h])
+                    x_left = x_left1 + (x_left2 - x_left1) * t
+                    y_left = y_left1 + (y_left2 - y_left1) * t
+
+                x_right1, y_right1 = x_mid, y_mid
+                x_right2, y_right2 = 2*x_L - x_ap, 2*y_L -y_ap
+                for label in Right_labels_rest:
+                    x, y = label
+                    cos_theta_1 = get_cos_theta(x_right1, y_right1, x_ap, y_ap, x_h, y_h)
+                    cos_theta_2 = get_cos_theta(x_right2, y_right2, x_ap, y_ap, x_h, y_h)
+                    cos_theta_label = get_cos_theta(x, y, x_ap, y_ap, x_h, y_h)
+
+                    cos_theta_1 = np.dot([x_right1 - x_h, y_right1 - y_h], [x_ap - x_h, y_ap - y_h]) / ( math.sqrt( (x_right1 - x_h)**2 + (y_right1 - y_h)**2 ) * math.sqrt( (x_ap - x_h)**2 + (y_ap - y_h)**2 ) )
+                    cos_theta_2 = np.dot([x_right2 - x_h, y_right2 - y_h], [x_ap - x_h, y_ap - y_h]) / ( math.sqrt( (x_right2 - x_h)**2 + (y_right2 - y_h)**2 ) * math.sqrt( (x_ap - x_h)**2 + (y_ap - y_h)**2 ) )
+                    cos_theta_label = np.dot([x - x_h, y - y_h], [x_ap - x_h, y_ap - y_h]) / ( math.sqrt( (x - x_h)**2 + (y - y_h)**2 ) * math.sqrt( (x_ap - x_h)**2 + (y_ap - y_h)**2 ) )
+
+                    x_right1 = x * (cos_theta_label >= 0) * (cos_theta_label < cos_theta_1) + x_right1 * (1 - (cos_theta_label >= 0) * (cos_theta_label < cos_theta_1))
+                    y_right1 = y * (cos_theta_label >= 0) * (cos_theta_label < cos_theta_1) + y_right1 * (1 - (cos_theta_label >= 0) * (cos_theta_label < cos_theta_1))
+
+                    x_right2 = x * (cos_theta_label <= 0) * (cos_theta_label > cos_theta_2) + x_right2 * (1 - (cos_theta_label <= 0) * (cos_theta_label > cos_theta_2))
+                    y_right2 = y * (cos_theta_label <= 0) * (cos_theta_label > cos_theta_2) + y_right2 * (1 - (cos_theta_label <= 0) * (cos_theta_label > cos_theta_2))
+
+                checker2 = (x_right2 == x_right1) * (y_right2 == y_right1)
+                if checker2 == 1:
+                    x_right = x_right1
+                    y_right = y_right1
+                else:
+                    t = np.dot([x_h - x_right1, y_h - y_right1], [x_ap - x_h, y_ap - y_h]) / np.dot([x_right2 - x_right1, y_right2 - y_right1], [x_ap - x_h, y_ap - y_h])
+                    x_right = x_right1 + (x_right2 - x_right1) * t
+                    y_right = y_right1 + (y_right2 - y_right1) * t
+
+                draw.line([(x_left, y_left), (x_right, y_right)], fill = line_color, width = 1)
+
+            else:
+                Left_labels_rest = []
+                Right_labels_rest = []
+                for label in Right_labels_by_middle:
+                    x_label, y_label = label
+                    if x_label < (K_b2*y_label + C_b2):
+                        Left_labels_rest.append(label)
+                    elif x_label > (K_b2*y_label + C_b2):
+                        Right_labels_rest.append(label)
+
+                Left_labels_rest = Left_labels_rest + [base_vertices[2]]
+                Right_labels_rest = Right_labels_rest + [base_vertices[2]]
+
+                x_left1, y_left1 = x_mid, y_mid
+                x_left2, y_left2 = 2*x_L - x_ap, 2*y_L -y_ap
+                for label in Left_labels_rest:
+                    x, y = label
+                    cos_theta_1 = get_cos_theta(x_left1, y_left1, x_ap, y_ap, x_h, y_h)
+                    cos_theta_2 = get_cos_theta(x_left2, y_left2, x_ap, y_ap, x_h, y_h)
+                    cos_theta_label = get_cos_theta(x, y, x_ap, y_ap, x_h, y_h)
+
+                    x_left1 = x * (cos_theta_label >= 0) * (cos_theta_label < cos_theta_1) + x_left1 * (1- (cos_theta_label >= 0) * (cos_theta_label < cos_theta_1))
+                    y_left1 = y * (cos_theta_label >= 0) * (cos_theta_label < cos_theta_1) + y_left1 * (1- (cos_theta_label >= 0) * (cos_theta_label < cos_theta_1))
+
+                    x_left2 = x * (cos_theta_label <= 0) * (cos_theta_label > cos_theta_2) + x_left2 * (1 - (cos_theta_label <= 0) * (cos_theta_label > cos_theta_2))
+                    y_left2 = y * (cos_theta_label <= 0) * (cos_theta_label > cos_theta_2) + y_left2 * (1 - (cos_theta_label <= 0) * (cos_theta_label > cos_theta_2))
+                
+                checker1 = (x_left2 == x_left1) * (y_left2 == y_left1)
+                if checker1 == 1:
+                    x_left = x_left1
+                    y_left = y_left1
+                else:
+                    t = np.dot([x_h - x_left1, y_h - y_left1], [x_ap - x_h, y_ap - y_h]) / np.dot([x_left2 - x_left1, y_left2 - y_left1], [x_ap - x_h, y_ap - y_h])
+                    x_left = x_left1 + (x_left2 - x_left1) * t
+                    y_left = y_left1 + (y_left2 - y_left1) * t
+
+                x_right1, y_right1 = x_mid, y_mid
+                x_right2, y_right2 = 2*x_L - x_ap, 2*y_L -y_ap
+                for label in Right_labels_rest:
+                    x, y = label
+                    cos_theta_1 = get_cos_theta(x_right1, y_right1, x_ap, y_ap, x_h, y_h)
+                    cos_theta_2 = get_cos_theta(x_right2, y_right2, x_ap, y_ap, x_h, y_h)
+                    cos_theta_label = get_cos_theta(x, y, x_ap, y_ap, x_h, y_h)
+
+                    x_right1 = x * (cos_theta_label >= 0) * (cos_theta_label < cos_theta_1) + x_right1 * (1 - (cos_theta_label >= 0) * (cos_theta_label < cos_theta_1))
+                    y_right1 = y * (cos_theta_label >= 0) * (cos_theta_label < cos_theta_1) + y_right1 * (1 - (cos_theta_label >= 0) * (cos_theta_label < cos_theta_1))
+
+                    x_right2 = x * (cos_theta_label <= 0) * (cos_theta_label > cos_theta_2) + x_right2 * (1 - (cos_theta_label <= 0) * (cos_theta_label > cos_theta_2))
+                    y_right2 = y * (cos_theta_label <= 0) * (cos_theta_label > cos_theta_2) + y_right2 * (1 - (cos_theta_label <= 0) * (cos_theta_label > cos_theta_2))
+
+                checker2 = (x_right2 == x_right1) * (y_right2 == y_right1)
+                if checker2 == 1:
+                    x_right = x_right1
+                    y_right = y_right1
+                else:
+                    t = np.dot([x_h - x_right1, y_h - y_right1], [x_ap - x_h, y_ap - y_h]) / np.dot([x_right2 - x_right1, y_right2 - y_right1], [x_ap - x_h, y_ap - y_h])
+                    x_right = x_right1 + (x_right2 - x_right1) * t
+                    y_right = y_right1 + (y_right2 - y_right1) * t
+
+                draw.line([(x_left, y_left), (x_right, y_right)], fill = line_color, width = 1)       
+
+    img.show()
+
+def nothing():
+    import matplotlib.pyplot as plt 
+    filenames = []
+    for filename in glob.glob('*.json'):
+        filenames.append(filename)
+
+    filenames.sort()
+    
+    LV_volumes = [] 
+    for filename_json_dir in filenames:
+        value =  Modified_Simpson_calculator(filename_json_dir) 
+        if value == 'nan':
+            LV_volumes.append(0) 
+        else: 
+            LV_volumes.append(value) 
+
+    EDV = max(LV_volumes)
+    ESV = min(LV_volumes)
+    EF = (EDV - ESV) * 100 / EDV
+    print('EF = {}'.format(EF))
+
+    x = list(range(0, len(LV_volumes))) 
+    plt.plot(x, LV_volumes)
+    plt.xlabel('Imgae frame')
+    plt.ylabel('LV volume (unitless)')
+    plt.title('The variation of LV volume ( EF = {} % )'.format(EF))
+    plt.show()
+
+    #for filename_json_dir in filenames: 
+    #    print(filename_json_dir + ' LV_volume = {}'.format(Modified_Simpson_calculator(filename_json_dir))) 
