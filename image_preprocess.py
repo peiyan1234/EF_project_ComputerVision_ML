@@ -32,6 +32,10 @@ def preprocessing(filename_png_dir):
     reduced_img = Image.fromarray(np.uint8(img)) 
     reduced_img.show()
 
+    img = Kapur_entropy_segmentation(img)
+    Kapur_img = Image.fromarray(np.uint8(img)) 
+    Kapur_img.show()
+
     img, covered_img = Sobel_edge_detection(img)
     edge_img = Image.fromarray(np.uint8(img)) 
     edge_img.show()
@@ -77,6 +81,7 @@ def median_filter(img):
     Return:
       noise_reduced_img: a noise reduced image
     """
+
     img_width, img_height, img_depth = img.shape
     noise_reduced_img = np.zeros(img.shape)
 
@@ -99,6 +104,7 @@ def Sobel_edge_detection(img):
     Return:
       edge_img: the edge image of img
     """
+
     img_width, img_height, img_depth = img.shape
     edge_img = np.zeros(img.shape)
 
@@ -115,3 +121,50 @@ def Sobel_edge_detection(img):
     covered_img = img + edge_img
 
     return edge_img, covered_img
+
+def Kapur_entropy_segmentation(img):
+    """Reduce the effect of speckle noise
+
+    Arg:
+      img: a noise reduced image.
+
+    Return:
+      Kapur_img: a binary image.
+    """
+    
+    Kapur_img = np.zeros(img.shape)
+
+    L = 256 # the number of pixel intensity levels
+    img_slice = img[:, :, 0]
+    list_pixelvalues = np.unique(img_slice.flatten()) 
+    N = len(img_slice.flatten()) # the total number of pixels
+
+    histogram = np.zeros(L)
+    basket = 0
+    for pixel in list_pixelvalues:
+        histogram[basket] = np.count_nonzero(img_slice == pixel)
+        basket += 1
+        if basket > L-1:
+            break
+
+    histogram = histogram / N
+    histogram[histogram == 0] = 1 / N # to avoid -Inf of log(x)
+
+    optimizer = 0 # initialize the optimizer
+    Ps = np.sum(histogram[0:1]) # initialize the Ps
+    Hn = -1 * np.sum(np.dot(histogram, np.log(histogram))) # initialize the Hn
+    Hs = -1 * np.sum(np.dot(histogram[0:1], np.log(histogram[0:1]))) # initialize the Hs
+    Phi = np.log(Ps * (1 - Ps)) + Hs / Ps + (Hn - Hs) / (1 - Ps) # initialize the Phi
+
+    #for pixel_value in list_pixelvalues[2:]:
+    #    Ps = np.sum(histogram[0:pixel_value])
+    #    Hs = -1 * np.sum(np.dot(histogram[0:pixel_value], np.log(histogram[0:pixel_value])))
+    #    current_Phi = np.log(Ps * (1 - Ps)) + Hs / Ps + (Hn - Hs) / (1 - Ps)
+    #    if current_Phi > Phi:
+    #        Phi = current_Phi
+    #        optimizer = pixel_value
+
+    #Kapur_img[img < optimizer] = 1
+    #Kapur_img[img >= optimizer] = 0
+
+    return Kapur_img
