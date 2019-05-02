@@ -8,15 +8,22 @@ from PIL import Image, ImageDraw
 
 """
 This tool is developed by Alvin Pei-Yan, Li.
-Please inform him for the authorizatiion before further utilities of this tool.
 Email: Alvin.Li@acer.com / d05548014@ntu.edu.tw
 """
 
-global apex_cordis # the coordinates of an apex cordis
+global apex_cordis # the coordinate of an apex cordis
 global base_vertices # a list of three points that will be used in Modified Simpson's Method later.
 N = 20 # the amount of disks for discretizely summing up the LV volume
 
 def Modified_Simpson_calculator(filename_json_dir):
+    """Get LV volume by Modified Simpson's Method
+
+    Arg:
+      filename_json_dir: a string of the absolute path of a .json file.
+
+    Return:
+      Left Ventricle (LV) volume
+    """
 
     labels_list = get_labels(filename_json_dir)
     largest_triangle = find_the_largest_triangle(labels_list)
@@ -25,6 +32,14 @@ def Modified_Simpson_calculator(filename_json_dir):
     return get_LV_volume(base_vertices, N, labels_list)
 
 def get_labels(filename_json_dir):
+    """Get a list of the coordinations of labels from the .json file
+
+    Arg:
+      filename_json_dir: a string of the absolute path of a .json file.
+
+    Return:
+      a list of the coordinations of labels 
+    """
 
     with open(filename_json_dir, encoding='utf-8') as json_file:
         label_dic = json.load(json_file)
@@ -32,6 +47,14 @@ def get_labels(filename_json_dir):
     return label_dic['shapes'][0]['points']
 
 def find_the_largest_triangle(labels_list):
+    """Find the largest triangle consisting of the apex cordis and other two points
+
+    Arg:
+      labels_list: a list of labels from the output of get_labels
+
+    Return:
+      largest_triangle: a list of three points whose traingle area is the largest
+    """
 
     Area = 0
     largest_triangle = []
@@ -44,13 +67,21 @@ def find_the_largest_triangle(labels_list):
             Area = Area_init
             largest_triangle = [label1, label2, label3]
 
-    return largest_triangle # a list of three points whose traingle area is the largest
+    return largest_triangle 
 
 def get_triangle_area(label1, label2, label3):
+    """Calculate the triangle area consisting of three labels
 
-    x1, y1 = label1 # point1: (x1, y1)
-    x2, y2 = label2 # point2: (x2, y2)
-    x3, y3 = label3 # point3: (x3, y3)
+    Args:
+      label1, label2, label3: the coordinates of labels
+
+    Return:
+      the triangle area of these three labels
+    """
+
+    x1, y1 = label1 
+    x2, y2 = label2 
+    x3, y3 = label3 
 
     Array_x = np.asarray([x1, x1, x1, x2, x2, x2, x3, x3, x3])
     Array_y = np.asarray([y1, y2, y3, y1, y2, y3, y1, y2, y3])
@@ -59,6 +90,15 @@ def get_triangle_area(label1, label2, label3):
     return np.absolute( 0.5 * np.sum( np.multiply( Array_x, np.multiply(Array_y,Array_0) ) ) )
 
 def check_the_bottom_2_points(labels_list, largest_triangle):
+    """Check the bottom points are correct for Modified Simpson's Method
+
+    Args:
+      labels_list: the output of get_labels
+      largest_triangle: the output of find_the_largest_triangle
+
+    Return:
+      a list of three points that will be used in Modified Simpson's Method later.
+    """
 
     label1, label2, label3 = largest_triangle
 
@@ -73,14 +113,21 @@ def check_the_bottom_2_points(labels_list, largest_triangle):
     K_denominator = (y2 + y3 - 2*y_ap) * (label1 == apex_cordis) + (y1 + y3 - 2*y_ap) * (label2 == apex_cordis) + (y1 + y2 - 2*y_ap) * (label3 == apex_cordis)
 
     return get_corrected_base_vertices(K_numerator, K_denominator, labels_list, apex_cordis)
-    # return a list of three points that will be used in Modified Simpson's Method later.
 
 def find_the_apex_cordis(largest_triangle):
- 
+    """Find which point is the apex cordis
+
+    Arg:
+      largest_triangle: the output of find_the_largest_triangle
+
+    Return:
+      the coordinate of the apex cordis
+    """
+
     label1, label2, label3 = largest_triangle
-    x1, y1 = label1 # point1: (x1, y1)
-    x2, y2 = label2 # point2: (x2, y2)
-    x3, y3 = label3 # point3: (x3, y3)
+    x1, y1 = label1 
+    x2, y2 = label2 
+    x3, y3 = label3 
 
     distance12 = math.sqrt( (x1 - x2)**2 + (y1 - y2)**2 )
     distance23 = math.sqrt( (x2 - x3)**2 + (y2 - y3)**2 )
@@ -98,7 +145,18 @@ def find_the_apex_cordis(largest_triangle):
         return label3
 
 def get_corrected_base_vertices(K_numerator, K_denominator, labels_list, apex_cordis):
-    
+    """Get the correct three base points for Modified Simpson's Method
+
+    Args:
+      K_numerator: apply to separate the labels to two groups. 
+      K_denominator: apply to separate the labels to two groups. 
+      labels_list: the output of get_labels
+      apex_cordis: the coordinate of the apex cordis
+
+    Return:
+      a list of the coordinates of the apex cordis and the left/right bottom points
+    """
+
     if K_denominator == 0:
         print('Got a wrong image!')
 
@@ -126,6 +184,16 @@ def get_corrected_base_vertices(K_numerator, K_denominator, labels_list, apex_co
         return [apex_cordis, [x_bleft, y_bleft], [x_bright, y_bright]]
 
 def get_LV_volume(base_vertices, N, labels_list):
+    """Get the Left Ventricle volume 
+
+    Args:
+      base_vertices: the output of get_corrected_base_vertices
+      N: 20 in typical, the number of discretized disks used to approximate the LV volume by integration 
+      labels_list: the output of get_labels
+
+    Return:
+      a list of the coordinates of the apex cordis and the left/right bottom points
+    """
 
     list_segmented_N_x, list_segmented_N_y, x_l, y_l, x_L, y_L, height = get_segmented_line(base_vertices, N)
     K, C, K_b1, C_b1, K_b2, C_b2 = get_distinguish_parameters(base_vertices)
@@ -339,10 +407,27 @@ def get_LV_volume(base_vertices, N, labels_list):
     return LV_volume
     
 def get_cos_theta(p1x, p1y, p2x, p2y, p3x, p3y):
+    """Get the value of cosine of the angle consisting of three points
+
+    Args:
+      p1x, p1y, p2x, p2y, p3x, p3y: from a point of (p1x, p1y), a point of (p2x, p2y), and a point of (p3x, p3y)
+
+    Return:
+      the value of cosine of the angle between the line of point 1 to point 3 and the line of point 2 to point 3.
+    """
 
     return np.dot([p1x - p3x, p1y - p3y], [p2x - p3x, p2y - p3y]) / ( math.sqrt( (p1x - p3x)**2 + (p1y - p3y)**2 ) * math.sqrt( (p2x - p3x)**2 + (p2y - p3y)**2 ) )
 
 def get_segmented_line(base_vertices, N):
+    """Get the value of cosine of the angle consisting of three points
+
+    Args:
+      base_vertices: the output of get_corrected_base_vertices
+      N: 20 in typical, the number of discretized disks used to approximate the LV volume by integration 
+
+    Returns:
+      several coordinates for the implementation of Modified Simpson's Method
+    """
 
     x_ap, y_ap = base_vertices[0]
     x_mid = ( base_vertices[1][0] + base_vertices[2][0] ) / 2.0
@@ -370,6 +455,14 @@ def get_segmented_line(base_vertices, N):
     return list_segmented_N_x, list_segmented_N_y, x_l, y_l, x_L, y_L, height
 
 def get_distinguish_parameters(base_vertices):
+    """Get the parameters for the implementation of Modified Simpsons' Method
+
+    Args:
+      base_vertices: the output of get_corrected_base_vertices
+
+    Returns:
+      several parameters for the implementation of Modified Simpson's Method
+    """
 
     x_ap, y_ap = base_vertices[0]
 
@@ -397,6 +490,15 @@ def get_distinguish_parameters(base_vertices):
     return K, C, K_b1, C_b1, K_b2, C_b2 
 
 def get_sides_labels(base_vertices, labels_list):
+    """Get the sides labels for finding the correct disks used to the integration of LV volume
+
+    Args:
+      base_vertices: the output of get_corrected_base_vertices
+      labels_list: the outpout of get_labels
+
+    Returns:
+      the sides labels for finding the correct disks used to the integration of LV volume
+    """
 
     K, C, K_b1, C_b1, K_b2, C_b2  = get_distinguish_parameters(base_vertices)
     x_ap, y_ap = base_vertices[0]
