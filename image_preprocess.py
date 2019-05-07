@@ -23,7 +23,7 @@ def preprocessing(filename_png_dir):
 
     img = Image.open(filename_png_dir)
     img = np.asarray(img)
-    
+
     img = histogram_equalization(img)
     enhanced_img = Image.fromarray(np.uint8(img)) 
     enhanced_img.show()
@@ -52,23 +52,25 @@ def histogram_equalization(img):
     Return:
       enhanced_img: an enhanced image
     """
-
-    img_shape = img.shape
-    flattened_img = img.flatten()
-    enhanced_img = np.zeros(flattened_img.shape)
+    img_width, img_height, img_depth = img.shape
 
     L = 256 # the number of pixel intensity levels
+    enhanced_img = np.zeros(img.shape)
+    
+    list_pixelvalues = np.unique(img[:, :, 0].flatten()) 
 
     histogram = np.zeros(L)
-    for pixel in flattened_img:
-        histogram[pixel] += 1
+    basket = 0
+    for pixel in list_pixelvalues:
+        histogram[basket] = np.count_nonzero(img[:, :, 0] == pixel)
+        basket += 1
+        if basket > L-1:
+            break
 
-    histogram = histogram / 3
     cumulative_sum = np.cumsum(histogram)
-    ImgTransformation = (L - 1) * (cumulative_sum - min(cumulative_sum)) / (max(cumulative_sum - min(cumulative_sum))) 
-
-    enhanced_img = ImgTransformation[flattened_img]
-    enhanced_img = np.reshape(enhanced_img, img_shape)
+    for index in range(0, len(list_pixelvalues)):
+        pixel = list_pixelvalues[index]
+        enhanced_img[img == pixel] = (L - 1) * (cumulative_sum[index] - min(cumulative_sum)) / (max(cumulative_sum - min(cumulative_sum))) 
 
     return enhanced_img
 
@@ -148,23 +150,28 @@ def Kapur_entropy_segmentation(img):
             break
 
     histogram = histogram / N
-    histogram[histogram == 0] = 1 / N # to avoid -Inf of log(x)
 
     optimizer = 0 # initialize the optimizer
-    Ps = np.sum(histogram[0:1]) # initialize the Ps
-    Hn = -1 * np.sum(np.dot(histogram, np.log(histogram))) # initialize the Hn
-    Hs = -1 * np.sum(np.dot(histogram[0:1], np.log(histogram[0:1]))) # initialize the Hs
-    Phi = np.log(Ps * (1 - Ps)) + Hs / Ps + (Hn - Hs) / (1 - Ps) # initialize the Phi
+    Hn = 0
+    for index in range(0, len(list_pixelvalues)):
+        if histogram[index] != 0:
+            Hn = Hn + (-1 * histogram[index] * np.log(histogram[index]))
 
-    #for pixel_value in list_pixelvalues[2:]:
-    #    Ps = np.sum(histogram[0:pixel_value])
-    #    Hs = -1 * np.sum(np.dot(histogram[0:pixel_value], np.log(histogram[0:pixel_value])))
-    #    current_Phi = np.log(Ps * (1 - Ps)) + Hs / Ps + (Hn - Hs) / (1 - Ps)
-    #    if current_Phi > Phi:
-    #        Phi = current_Phi
-    #        optimizer = pixel_value
+    Ps = 0 #histogram[0]
+    Hs = 0 #( -1 * histogram[0] * np.log(histogram[0]) )
+    optimizer = 0 #list_pixelvalues[0]
+    Phi = 0 #np.log(Ps * (1 - Ps)) + Hs / Ps + (Hn - Hs) / (1 - Ps)
 
-    #Kapur_img[img < optimizer] = 1
-    #Kapur_img[img >= optimizer] = 0
+    for index in range(0, len(list_pixelvalues)):        
+        if histogram[index] != 0:   
+            Ps = Ps + histogram[index]
+            if Ps < 1:
+                Hs = Hs + ( -1 * histogram[index] * np.log(histogram[index]) )
+                value = np.log(Ps * (1 - Ps)) + Hs / Ps + (Hn - Hs) / (1 - Ps)
+                optimizer = list_pixelvalues[index] * (value > Phi) + optimizer * (value <= Phi)
+                Phi = value * (value > Phi) + Phi * (value <= Phi)
+
+    Kapur_img[img < optimizer] = 0
+    Kapur_img[img >= optimizer] = 255
 
     return Kapur_img
