@@ -7,8 +7,73 @@ from itertools import combinations
 from PIL import Image, ImageDraw
 
 """
-Boundary fill algorithm bases on 8-connected pixels.
+Generate the ground truth mask for each image. 
 """
+"""
+This tool is developed by Alvin Pei-Yan, Li.
+Email: Alvin.Li@acer.com / d05548014@ntu.edu.tw
+"""
+
+global ROI_mask
+
+def main():
+    dir_whereamI = os.getcwd()
+    for filename in glob.glob('*.json'):
+        filename_json_dir = filename
+        filename_png_dir = filename.replace("json","png")
+
+        GT_ROI_mask = generate_ROI_mask(filename_json_dir, filename_png_dir)
+        savingdir = os.path.join(dir_whereamI, filename_png_dir.replace(".png","_ROI_mask.png"))
+        GT_ROI_mask.save(savingdir)
+
+def generate_ROI_mask(filename_json_dir, filename_png_dir):
+    global ROI_mask
+    labels_list = get_labels(filename_json_dir)
+
+    x1, y1 = labels_list[0]
+    x2, y2 = labels_list[1]
+    bresenham_line_algorithm(x1, y1, x2, y2)
+
+    contour_list = []
+    N = len(labels_list)
+    for n in range(0, N - 1):
+        x1, y1 = labels_list[n]
+        x2, y2 = labels_list[n+1]
+        points = bresenham_line_algorithm(x1, y1, x2, y2)
+        if points[0] == labels_list[n+1]:
+            points.reverse()
+        M = len(points)
+        for m in range(0, M - 1):
+            contour_list.append(points[m])
+
+    x1, y1 = labels_list[N - 1]
+    x2, y2 = labels_list[0]
+    points = bresenham_line_algorithm(x1, y1, x2, y2)
+    if points[0] == labels_list[0]:
+        points.reverse()
+    M = len(points)
+    for m in range(0, M - 1):
+        contour_list.append(points[m])
+
+    [label1, label2, label3] = find_the_largest_triangle(labels_list)
+    seed_x = int((label1[0] + label2[0] + label3[0]) / 3)
+    seed_y = int((label1[1] + label2[1] + label3[1]) / 3)
+
+    img = Image.open(filename_png_dir)
+    img = np.asarray(img)
+    img_width, img_height, img_depth = img.shape
+    ROI_mask = np.zeros((img_width, img_height))
+
+    for point in contour_list:
+        contour_x, contour_y = point
+        ROI_mask[int(contour_y), int(contour_x)] = 255
+
+    BoundaryFill4(seed_x, seed_y, fill_color = 255, boundary_color = 255)
+
+    GT_ROI_mask = Image.fromarray(np.uint8(ROI_mask)) 
+    #GT_ROI_mask.show()
+
+    return GT_ROI_mask
 
 def bresenham_line_algorithm(x1, y1, x2, y2):
     """draw pixels between (x1, y1) and (x2, y2) to form a straight line 
@@ -65,37 +130,32 @@ def plotLineHigh(x1, y1, x2, y2):
     return points
 
 
-def BoundaryFill8(x, y, fill_color, boundary_color):
+def BoundaryFill4(x, y, fill_color, boundary_color):
     """Fill the region inside a closed contour
 
     Arg:
-      x, y: the seed's location which should be inside the region of a closed contour
+      x, y: the location of seed should be inside the region of a closed contour
       fill_color: gray level from 0 to 255
       boundary_color: gray level from 0 to 255
 
     Return:
       N/A
     """
+    global ROI_mask
+    holes = set()
+    holes.add((x, y))
+    while len(holes) > 0:
+        (x, y) = holes.pop()
+        ROI_mask[y, x] = fill_color * (ROI_mask[y, x] != boundary_color) + ROI_mask[y, x] * (1 - (ROI_mask[y, x] != boundary_color))
 
-""" Reference code
-void boundaryFill8(int x, int y, int fill_color,int boundary_color)
-{
-    if(getpixel(x, y) != boundary_color &&
-       getpixel(x, y) != fill_color)
-    {
-        putpixel(x, y, fill_color);
-        boundaryFill8(x + 1, y, fill_color, boundary_color);
-        boundaryFill8(x, y + 1, fill_color, boundary_color);
-        boundaryFill8(x - 1, y, fill_color, boundary_color);
-        boundaryFill8(x, y - 1, fill_color, boundary_color);
-        boundaryFill8(x - 1, y - 1, fill_color, boundary_color);
-        boundaryFill8(x - 1, y + 1, fill_color, boundary_color);
-        boundaryFill8(x + 1, y - 1, fill_color, boundary_color);
-        boundaryFill8(x + 1, y + 1, fill_color, boundary_color);
-    }
-}
-
-"""
+        if ROI_mask[y + 1, x] != boundary_color:
+            holes.add((x, y + 1))
+        if ROI_mask[y - 1, x] != boundary_color:
+            holes.add((x, y - 1))
+        if ROI_mask[y, x + 1] != boundary_color:
+            holes.add((x + 1, y))
+        if ROI_mask[y, x - 1] != boundary_color:
+            holes.add((x - 1, y))
 
 def get_labels(filename_json_dir):
     """Get a list of the coordinations of labels from the .json file
@@ -156,38 +216,8 @@ def get_triangle_area(label1, label2, label3):
 
     return np.absolute( 0.5 * np.sum( np.multiply( Array_x, np.multiply(Array_y,Array_0) ) ) )
 
-#labels_list = get_labels(filename_json_dir)
 
-x1, y1 = labels_list[0]
-x2, y2 = labels_list[1]
-bresenham_line_algorithm(x1, y1, x2, y2)
+""" Execution """
 
-contour_list = []
-N = len(labels_list)
-for n in range(0, N - 1):
-    x1, y1 = labels_list[n]
-    x2, y2 = labels_list[n+1]
-    points = bresenham_line_algorithm(x1, y1, x2, y2)
-    if points[0] == labels_list[n+1]:
-        points.reverse()
-    M = len(points)
-    for m in range(0, M - 1):
-        contour_list.append(points[m])
-
-x1, y1 = labels_list[N - 1]
-x2, y2 = labels_list[0]
-points = bresenham_line_algorithm(x1, y1, x2, y2)
-if points[0] == labels_list[0]:
-    points.reverse()
-M = len(points)
-for m in range(0, M - 1):
-    contour_list.append(points[m])
-
-[label1, label2, label3] = find_the_largest_triangle(labels_list)
-seed_x = (label1[0] + label2[0] + label3[0]) / 3
-seed_y = (label1[1] + label2[0] + label3[0]) / 3
-
-img = Image.open(filename_png_dir)
-img = np.asarray(img)
-img_width, img_height, img_depth = img.shape
-ROI_mask = np.zeros(img_width, img_height)
+if __name__ == '__main__':
+    main()

@@ -11,6 +11,15 @@ This tool is developed by Alvin Pei-Yan, Li.
 Email: Alvin.Li@acer.com / d05548014@ntu.edu.tw
 """
 
+def main():
+
+    dir_whereamI = os.getcwd()
+    for filename in glob.glob('*.png'):
+        modified_img = preprocessing(filename)
+        savingdir = os.path.join(dir_whereamI, filename.replace(".png","_enhanced.png"))
+        modified_img.save(savingdir)
+
+
 def preprocessing(filename_png_dir):
     """Pre-processing
 
@@ -26,22 +35,27 @@ def preprocessing(filename_png_dir):
 
     img = histogram_equalization(img)
     enhanced_img = Image.fromarray(np.uint8(img)) 
-    enhanced_img.show()
+    #enhanced_img.show()
 
     img = median_filter(img) 
     reduced_img = Image.fromarray(np.uint8(img)) 
-    reduced_img.show()
+    #reduced_img.show()
 
-    img = Kapur_entropy_segmentation(img)
-    Kapur_img = Image.fromarray(np.uint8(img)) 
-    Kapur_img.show()
+    #img = Kapur_entropy_segmentation(img)
+    #Kapur_img = Image.fromarray(np.uint8(img)) 
+    #Kapur_img.show()
 
     img, covered_img = Sobel_edge_detection(img)
     edge_img = Image.fromarray(np.uint8(img)) 
-    edge_img.show()
+    #edge_img.show()
 
     covered_img = Image.fromarray(np.uint8(covered_img)) 
-    covered_img.show()
+    #covered_img.show()
+
+    original_img = Image.open(filename_png_dir)
+    edged_img = Image.fromarray(np.uint8(img + original_img))
+    #edged_img.show()
+    return edged_img
 
 def histogram_equalization(img):
     """An contrast enhancer
@@ -175,3 +189,15 @@ def Kapur_entropy_segmentation(img):
     Kapur_img[img >= optimizer] = 255
 
     return Kapur_img
+
+#import time
+if __name__ == '__main__':
+#    start = time. time()
+
+    main()
+
+#    end = time. time()
+
+#    duration = end - start
+
+#print('\nThis code runs so fast that only spends {} in second.'.format(duration))
