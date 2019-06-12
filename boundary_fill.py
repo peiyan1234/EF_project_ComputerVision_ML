@@ -29,6 +29,9 @@ def main():
 def generate_ROI_mask(filename_json_dir, filename_png_dir):
     global ROI_mask
     labels_list = get_labels(filename_json_dir)
+    for n in range(0, len(labels_list)):
+        x, y = labels_list[n]
+        labels_list[n] = [int(x), int(y)]
 
     x1, y1 = labels_list[0]
     x2, y2 = labels_list[1]
@@ -56,6 +59,8 @@ def generate_ROI_mask(filename_json_dir, filename_png_dir):
         contour_list.append(points[m])
 
     [label1, label2, label3] = find_the_largest_triangle(labels_list)
+    #seed_x = int( label1[0] + ((label2[0] + label3[0]) / 2 - label1[0]) / abs((label2[0] + label3[0] / 2) - label1[0]))
+    #seed_y = int( label1[1] + ((label2[1] + label3[1]) / 2 - label1[1]) / abs((label2[1] + label3[1] / 2) - label1[1]))
     seed_x = int((label1[0] + label2[0] + label3[0]) / 3)
     seed_y = int((label1[1] + label2[1] + label3[1]) / 3)
 
