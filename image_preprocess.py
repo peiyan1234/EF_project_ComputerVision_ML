@@ -190,14 +190,6 @@ def Kapur_entropy_segmentation(img):
 
     return Kapur_img
 
-#import time
+
 if __name__ == '__main__':
-#    start = time. time()
-
     main()
-
-#    end = time. time()
-
-#    duration = end - start
-
-#print('\nThis code runs so fast that only spends {} in second.'.format(duration))
