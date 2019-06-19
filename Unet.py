@@ -24,8 +24,8 @@ NUM_EXAMPLES_PER_EPOCH_FOR_EVAL = Unet_input.NUM_EXAMPLES_PER_EPOCH_FOR_EVAL
 
 MOVING_AVERAGE_DECAY = 0.9999
 NUM_EPOCHS_PER_DECAY = 100
-LEARNING_RATE_DECAY_FACTOR = 0.1
-INITIAL_LEARNING_RATE = 0.1
+LEARNING_RATE_DECAY_FACTOR = 0.12
+INITIAL_LEARNING_RATE = 0.12
 
 """
 If a model is trained with multiple GPUs, prefix all op names with tower_name
@@ -113,6 +113,31 @@ def distorted_inputs():
 
     return images, labels
 
+def inputs(eval_data):
+    """Construct input for evaluation using the Reader ops.
+
+    Args:
+        eval_data: bool, indicating if one should use the train or eval data set.
+
+    Returns:
+        images: Images, 4D tensor of [batch_size, width, height, 1] size
+        labels: Labels, 4D tensor of [batch_size, width, height, 1] size
+
+    Raises:
+        ValueError: If no data_dir
+    """
+    if not FLAGS.dir_data:
+        raise ValueError('Please supply a data_dir')
+    dir_data = os.path.join(FLAGS.dir_data, 'batches', 'test_batch')
+    images, labels = Unet_input.inputs(eval_data=eval_data,
+                                        dir_data=dir_data,
+                                        batch_size=FLAGS.batch_size)
+    if FLAGS.use_fp16:
+        images = tf.cast(images, tf.float16)
+        labels = tf.cast(labels, tf.float16)
+    
+    return images, labels
+
 def inference(images):
     """Build the Unet model.
     
@@ -139,7 +164,7 @@ def inference(images):
     # Max pool 2x2 filter, strides = 2
     # dropout rate = 0.1
 
-    with tf.variable_scope('1st: 2@conv2d') as scope:
+    with tf.variable_scope('1st_block_conv2d') as scope:
         kernel1 = _variable_with_weight_decay('weights1', shape = [3, 3, 1, 16], stddev = 5e-2, wd = None)
         conv = tf.nn.conv2d(images, kernel1, [1, 1, 1, 1], padding='SAME')
         biases1 = _variable_on_cpu('biases1', [16], tf.constant_initializer(0.1))
@@ -154,16 +179,16 @@ def inference(images):
 
         _activation_summary(conv1)
 
-    pool_1st = tf.nn.max_pool(conv1, ksize = [1, 2, 2, 1], strides = [1, 2, 2, 1], padding = 'SAME', name = '1st: pool')
+    pool_1st = tf.nn.max_pool(conv1, ksize = [1, 2, 2, 1], strides = [1, 2, 2, 1], padding = 'SAME', name = '1st_pool')
     pool_1st = tf.nn.dropout(pool_1st, rate = 0.1)
 
-    norm_1st = tf.nn.lrn(pool_1st, 1, bias=1.0, alpha=0.001 / 9.0, beta=0.75, name='1st: norm')
+    norm_1st = tf.nn.lrn(pool_1st, 1, bias=1.0, alpha=0.001 / 9.0, beta=0.75, name='1st_norm')
 
     # 2@ConvLayers, 32@ 3x3 filters, Padding = 'same'
     # Max pool 2x2 filter, strides = 2
     # dropout rate = 0.1
 
-    with tf.variable_scope('2nd: 2@conv2d') as scope:
+    with tf.variable_scope('2nd_block_conv2d') as scope:
         kernel1 = _variable_with_weight_decay('weights1', shape = [3, 3, 16, 32], stddev = 5e-2, wd = None)
         conv = tf.nn.conv2d(norm_1st, kernel1, [1, 1, 1, 1], padding='SAME')
         biases1 = _variable_on_cpu('biases1', [32], tf.constant_initializer(0.1))
@@ -178,16 +203,16 @@ def inference(images):
 
         _activation_summary(conv2)
 
-    pool_2nd = tf.nn.max_pool(conv2, ksize = [1, 2, 2, 1], strides = [1, 2, 2, 1], padding = 'SAME', name = '2nd: pool')
+    pool_2nd = tf.nn.max_pool(conv2, ksize = [1, 2, 2, 1], strides = [1, 2, 2, 1], padding = 'SAME', name = '2nd_pool')
     pool_2nd = tf.nn.dropout(pool_2nd, rate = 0.1)
 
-    norm_2nd = tf.nn.lrn(pool_2nd, 1, bias=1.0, alpha=0.001 / 9.0, beta=0.75, name='2nd: norm')
+    norm_2nd = tf.nn.lrn(pool_2nd, 1, bias=1.0, alpha=0.001 / 9.0, beta=0.75, name='2nd_norm')
 
     # 2@ConvLayers, 64@ 3x3 filters, Padding = 'same'
     # Max pool 2x2 filter, strides = 2
     # dropout rate = 0.1
 
-    with tf.variable_scope('3rd: 2@conv2d') as scope:
+    with tf.variable_scope('3rd_block_conv2d') as scope:
         kernel1 = _variable_with_weight_decay('weights1', shape = [3, 3, 32, 64], stddev = 5e-2, wd = None)
         conv = tf.nn.conv2d(norm_2nd, kernel1, [1, 1, 1, 1], padding='SAME')
         biases1 = _variable_on_cpu('biases1', [64], tf.constant_initializer(0.1))
@@ -202,16 +227,16 @@ def inference(images):
 
         _activation_summary(conv3)
 
-    pool_3rd = tf.nn.max_pool(conv3, ksize = [1, 2, 2, 1], strides = [1, 2, 2, 1], padding = 'SAME', name = '3rd: pool')
+    pool_3rd = tf.nn.max_pool(conv3, ksize = [1, 2, 2, 1], strides = [1, 2, 2, 1], padding = 'SAME', name = '3rd_pool')
     pool_3rd = tf.nn.dropout(pool_3rd, rate = 0.1)
 
-    norm_3rd = tf.nn.lrn(pool_3rd, 1, bias=1.0, alpha=0.001 / 9.0, beta=0.75, name='3rd: norm')
+    norm_3rd = tf.nn.lrn(pool_3rd, 1, bias=1.0, alpha=0.001 / 9.0, beta=0.75, name='3rd_norm')
 
     # 2@ConvLayers, 128@ 3x3 filters, Padding = 'same'
     # Max pool 5x5 filter, strides = 5
     # dropout rate = 0.1
 
-    with tf.variable_scope('4th: 2@conv2d') as scope:
+    with tf.variable_scope('4th_block_conv2d') as scope:
         kernel1 = _variable_with_weight_decay('weights1', shape = [3, 3, 64, 128], stddev = 5e-2, wd = None)
         conv = tf.nn.conv2d(norm_3rd, kernel1, [1, 1, 1, 1], padding='SAME')
         biases1 = _variable_on_cpu('biases1', [128], tf.constant_initializer(0.1))
@@ -226,14 +251,14 @@ def inference(images):
 
         _activation_summary(conv4)
 
-    pool_4th = tf.nn.max_pool(conv4, ksize = [1, 5, 5, 1], strides = [1, 5, 5, 1], padding = 'SAME', name = '4th: pool')
+    pool_4th = tf.nn.max_pool(conv4, ksize = [1, 5, 5, 1], strides = [1, 5, 5, 1], padding = 'SAME', name = '4th_pool')
     pool_4th = tf.nn.dropout(pool_4th, rate = 0.1)
 
-    norm_4th = tf.nn.lrn(pool_4th, 1, bias=1.0, alpha=0.001 / 9.0, beta=0.75, name='4th: norm')
+    norm_4th = tf.nn.lrn(pool_4th, 1, bias=1.0, alpha=0.001 / 9.0, beta=0.75, name='4th_norm')
 
     # 2@ConvLayers, 256@ 3x3 filters, Padding = 'same'
 
-    with tf.variable_scope('5th: 2@conv2d') as scope:
+    with tf.variable_scope('5th_block_conv2d') as scope:
         kernel1 = _variable_with_weight_decay('weights1', shape = [3, 3, 128, 256], stddev = 5e-2, wd = None)
         conv = tf.nn.conv2d(norm_4th, kernel1, [1, 1, 1, 1], padding='SAME')
         biases1 = _variable_on_cpu('biases1', [256], tf.constant_initializer(0.1))
@@ -248,7 +273,7 @@ def inference(images):
 
         _activation_summary(conv5)
 
-    norm_5th = tf.nn.lrn(conv5, 1, bias=1.0, alpha=0.001 / 9.0, beta=0.75, name='5th: norm')
+    norm_5th = tf.nn.lrn(conv5, 1, bias=1.0, alpha=0.001 / 9.0, beta=0.75, name='5th_norm')
 
 
     ########################
@@ -259,8 +284,8 @@ def inference(images):
     # conv2d_transpose
     # concatenate along the axis of channels
     
-    with tf.variable_scope('6th: Unsample - Transposed conv2d') as scope:
-        kernel1 = _variable_with_weight_decay('weights1', shape = [5, 5, 256, 128], stddev = 5e-2, wd = None)
+    with tf.variable_scope('6th_Unsample_Transposed_conv2d') as scope:
+        kernel1 = _variable_with_weight_decay('weights1', shape = [5, 5, 128, 256], stddev = 5e-2, wd = None)
         upcon6 = tf.nn.conv2d_transpose(norm_5th, kernel1, output_shape = tf.shape(conv4), strides = [1, 5, 5, 1], padding='SAME')
         upcon6 = tf.concat([upcon6, conv4], 3)
 
@@ -268,7 +293,7 @@ def inference(images):
 
     # 2@ConvLayers, 128@ 3x3 filters, Padding = 'same'
 
-    with tf.variable_scope('6th: 2@conv2d') as scope:
+    with tf.variable_scope('6th_block_conv2d') as scope:
         kernel1 = _variable_with_weight_decay('weights1', shape = [3, 3, 256, 128], stddev = 5e-2, wd = None)
         conv = tf.nn.conv2d(upcon6, kernel1, [1, 1, 1, 1], padding='SAME')
         biases1 = _variable_on_cpu('biases1', [128], tf.constant_initializer(0.1))
@@ -283,13 +308,13 @@ def inference(images):
 
         _activation_summary(conv6)
 
-    norm_6th = tf.nn.lrn(conv6, 1, bias=1.0, alpha=0.001 / 9.0, beta=0.75, name='6th: norm')
+    norm_6th = tf.nn.lrn(conv6, 1, bias=1.0, alpha=0.001 / 9.0, beta=0.75, name='6th_norm')
 
     # conv2d_transpose
     # concatenate along the axis of channels
 
-    with tf.variable_scope('7th: Unsample - Transposed conv2d') as scope:
-        kernel1 = _variable_with_weight_decay('weights1', shape = [3, 3, 128, 64], stddev = 5e-2, wd = None)
+    with tf.variable_scope('7th_Unsample_Transposed_conv2d') as scope:
+        kernel1 = _variable_with_weight_decay('weights1', shape = [3, 3, 64, 128], stddev = 5e-2, wd = None)
         upcon7 = tf.nn.conv2d_transpose(norm_6th, kernel1, output_shape = tf.shape(conv3), strides = [1, 2, 2, 1], padding='SAME')
         upcon7 = tf.concat([upcon7, conv3], 3)
 
@@ -297,7 +322,7 @@ def inference(images):
 
     # 2@ConvLayers, 64@ 3x3 filters, Padding = 'same'
 
-    with tf.variable_scope('7th: 2@conv2d') as scope:
+    with tf.variable_scope('7th_block_conv2d') as scope:
         kernel1 = _variable_with_weight_decay('weights1', shape = [3, 3, 128, 64], stddev = 5e-2, wd = None)
         conv = tf.nn.conv2d(upcon7, kernel1, [1, 1, 1, 1], padding='SAME')
         biases1 = _variable_on_cpu('biases1', [64], tf.constant_initializer(0.1))
@@ -312,13 +337,13 @@ def inference(images):
 
         _activation_summary(conv7)
 
-    norm_7th = tf.nn.lrn(conv7, 1, bias=1.0, alpha=0.001 / 9.0, beta=0.75, name='7th: norm')
+    norm_7th = tf.nn.lrn(conv7, 1, bias=1.0, alpha=0.001 / 9.0, beta=0.75, name='7th_norm')
 
     # conv2d_transpose
     # concatenate along the axis of channels
 
-    with tf.variable_scope('8th: Unsample - Transposed conv2d') as scope:
-        kernel1 = _variable_with_weight_decay('weights1', shape = [3, 3, 64, 32], stddev = 5e-2, wd = None)
+    with tf.variable_scope('8th_Unsample_Transposed_conv2d') as scope:
+        kernel1 = _variable_with_weight_decay('weights1', shape = [3, 3, 32, 64], stddev = 5e-2, wd = None)
         upcon8 = tf.nn.conv2d_transpose(norm_7th, kernel1, output_shape = tf.shape(conv2), strides = [1, 2, 2, 1], padding='SAME')
         upcon8 = tf.concat([upcon8, conv2], 3)
 
@@ -326,7 +351,7 @@ def inference(images):
 
     # 2@ConvLayers, 32@ 3x3 filters, Padding = 'same'
 
-    with tf.variable_scope('8th: 2@conv2d') as scope:
+    with tf.variable_scope('8th_block_conv2d') as scope:
         kernel1 = _variable_with_weight_decay('weights1', shape = [3, 3, 64, 32], stddev = 5e-2, wd = None)
         conv = tf.nn.conv2d(upcon8, kernel1, [1, 1, 1, 1], padding='SAME')
         biases1 = _variable_on_cpu('biases1', [32], tf.constant_initializer(0.1))
@@ -341,13 +366,13 @@ def inference(images):
 
         _activation_summary(conv8)
 
-    norm_8th = tf.nn.lrn(conv8, 1, bias=1.0, alpha=0.001 / 9.0, beta=0.75, name='8th: norm')
+    norm_8th = tf.nn.lrn(conv8, 1, bias=1.0, alpha=0.001 / 9.0, beta=0.75, name='8th_norm')
 
     # conv2d_transpose
     # concatenate along the axis of channels
     
-    with tf.variable_scope('9th: Unsample - Transposed conv2d') as scope:
-        kernel1 = _variable_with_weight_decay('weights1', shape = [3, 3, 32, 16], stddev = 5e-2, wd = None)
+    with tf.variable_scope('9th_Unsample_Transposed_conv2d') as scope:
+        kernel1 = _variable_with_weight_decay('weights1', shape = [3, 3, 16, 32], stddev = 5e-2, wd = None)
         upcon9 = tf.nn.conv2d_transpose(norm_8th, kernel1, output_shape = tf.shape(conv1), strides = [1, 2, 2, 1], padding='SAME')
         upcon9 = tf.concat([upcon9, conv1], 3)
 
@@ -355,7 +380,7 @@ def inference(images):
 
     # 2@ConvLayers, 16@ 3x3 filters, Padding = 'same'
 
-    with tf.variable_scope('9th: 2@conv2d') as scope:
+    with tf.variable_scope('9th_block_conv2d') as scope:
         kernel1 = _variable_with_weight_decay('weights1', shape = [3, 3, 32, 16], stddev = 5e-2, wd = None)
         conv = tf.nn.conv2d(upcon9, kernel1, [1, 1, 1, 1], padding='SAME')
         biases1 = _variable_on_cpu('biases1', [16], tf.constant_initializer(0.1))
@@ -370,17 +395,17 @@ def inference(images):
 
         _activation_summary(conv9)
 
-    norm_9th = tf.nn.lrn(conv9, 1, bias=1.0, alpha=0.001 / 9.0, beta=0.75, name='9th: norm')
+    norm_9th = tf.nn.lrn(conv9, 1, bias=1.0, alpha=0.001 / 9.0, beta=0.75, name='9th_norm')
 
     # 1@ConvLayers, 16@ 1x1 filters, Padding = 'same', activation = 'sigmoid'
 
-    with tf.variable_scope('10th: 2@conv2d') as scope:
+    with tf.variable_scope('10th_block_conv2d') as scope:
         kernel1 = _variable_with_weight_decay('weights1', shape = [1, 1, 16, 1], stddev = 5e-2, wd = None)
         conv10 = tf.nn.conv2d(norm_9th, kernel1, [1, 1, 1, 1], padding='SAME')
-        biases1 = _variable_on_cpu('biases1', [16], tf.constant_initializer(0.1))
+        biases1 = _variable_on_cpu('biases1', [1], tf.constant_initializer(0.1))
         pre_activation1 = tf.nn.bias_add(conv10, biases1)
         conv10 = tf.nn.sigmoid(pre_activation1, name=scope.name)
-        conv10 = tf.math.multiply(conv10, 255, name=scope.name)
+        #conv10 = tf.math.multiply(conv10, 255, name=scope.name)
 
         _activation_summary(conv10)
 
@@ -402,11 +427,12 @@ def loss(images, labels):
 
     reshaped_images = tf.cast(tf.reshape(images, [-1]), tf.float32)
     reshape_labels = tf.cast(tf.reshape(labels, [-1]), tf.float32)
-
-    labels = tf.cast(labels, tf.int64)
-
-    cross_entropy = tf.nn.sparse_softmax_cross_entropy_with_logits(labels = reshape_labels, logits = reshaped_images, name = 'cross_entropy')
-    tf.add_to_collection('losses', cross_entropy)
+    reshape_labels = tf.math.divide(reshape_labels, 255)
+    labels = tf.cast(reshape_labels, tf.float32)
+    logits = tf.exp(reshaped_images) / tf.reduce_sum(tf.exp(reshaped_images))
+    cross_entropy = tf.nn.weighted_cross_entropy_with_logits(targets = labels, logits = logits, pos_weight = 1)
+    cross_entropy_mean = tf.reduce_mean(cross_entropy, name='cross_entropy')
+    tf.add_to_collection('losses', cross_entropy_mean)
 
     return tf.add_n(tf.get_collection('losses'), name='total_loss')
 

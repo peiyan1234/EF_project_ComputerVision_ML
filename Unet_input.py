@@ -16,9 +16,10 @@ import tensorflow as tf
 import numpy as np
 
 IMAGE_SIZE = (800, 600)
+height, width = IMAGE_SIZE
 
-#NUM_EXAMPLES_PER_EPOCH_FOR_TRAIN = 10089
-#NUM_EXAMPLES_PER_EPOCH_FOR_EVAL = 2522
+NUM_EXAMPLES_PER_EPOCH_FOR_TRAIN = 485
+NUM_EXAMPLES_PER_EPOCH_FOR_EVAL = 121
 
 dir_training_pool = '/home/alvinli/Desktop/EF/dataset/EF-training-Pool'
 dir_datasheet = os.path.join(dir_training_pool,'datasheet.json')
@@ -27,7 +28,7 @@ def distorted_inputs(dir_data, batch_size):
     """Generate distorted input for Unet training. 
 
     Args:
-        dir_pool: path to the data
+        dir_data: path to the data
         batch_size: number of images per batch
     
     Returns:
@@ -121,20 +122,58 @@ def _generate_image_and_label_batch(image, label, min_queue_examples, batch_size
     """
     num_preprocess_threads = 4
     if shuffle:
-        images, label_batch = tf.train.shuffle_batch(
+        images, labels = tf.train.shuffle_batch(
             [image, label],
             batch_size=batch_size,
             num_threads=num_preprocess_threads,
             capacity=min_queue_examples + 3 * batch_size,
-            min_after_dequeue=min_queue_examples)
+            min_after_dequeue=min_queue_examples,
+            shapes = [(width, height, 1), (width, height, 1)])
     else:
-        images, label_batch = tf.train.batch(
+        images, labels = tf.train.batch(
             [image, label],
             batch_size=batch_size,
             num_threads=num_preprocess_threads,
-            capacity=min_queue_examples + 3 * batch_size)
+            capacity=min_queue_examples + 3 * batch_size,
+            shapes = [(width, height, 1), (width, height, 1)])
 
     # Display the training images in the visualizer.
     tf.summary.image('images', images)
 
-    return images, tf.reshape(label_batch, [batch_size])
+    return images, labels
+
+def inputs(eval_data, dir_data, batch_size):
+    """Construct input for evaluation using the Reader ops.
+
+    Args:
+        eval_data: bool, indicating if one should use the train or eval data set.
+        dir_data: path to the data.
+        batch_size: number of images per batch
+
+    Returns:
+        images: Images, 4D tensor of [batch_size, width, height, 1] size.
+        labels: Labels, 4D tensor of [batch_size, width, height, 1] size.
+    """
+    label_images = []
+    input_images = []
+    for name in glob.glob(os.path.join(dir_data, '*_ROI_mask.png')):
+        label_images.append(name)
+        input_images.append(name.replace("_ROI_mask.png",".png"))
+
+    queue = input_images
+    with tf.name_scope('input'):
+        read_input = read_data(queue, label_images)
+        reshaped_image = tf.cast(read_input.uint8image, tf.float32)
+        reshaped_label = tf.cast(read_input.uint8label, tf.float32)
+
+        float_image = tf.image.per_image_standardization(reshaped_image)
+        
+        min_fraction_of_examples_in_queue = 0.4
+        min_queue_examples = int(NUM_EXAMPLES_PER_EPOCH_FOR_TRAIN * min_fraction_of_examples_in_queue)
+
+        print ('Filling queue with %d EF images before starting to train. '
+               'This will take a few minutes.' % min_queue_examples)
+
+    return _generate_image_and_label_batch(float_image, reshaped_label,
+                                          min_queue_examples, batch_size,
+                                          shuffle=True)
