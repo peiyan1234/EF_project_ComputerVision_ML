@@ -23,13 +23,13 @@ tf.app.flags.DEFINE_integer('eval_interval_secs', 1,"""How often to run the eval
 tf.app.flags.DEFINE_integer('num_examples', 121,"""Number of examples to run.""")
 tf.app.flags.DEFINE_boolean('run_once', False,"""Whether to run eval only once.""")
 
-def eval_once(saver, summary_writer, top_k_op, summary_op):
+def eval_once(saver, summary_writer, Overlap_rate, summary_op):
   """Run Eval once.
 
   Args:
     saver: Saver.
     summary_writer: Summary writer.
-    top_k_op: Top K op.
+    Overlap_rate: Top Overlap_rate.
     summary_op: Summary op.
   """
   with tf.Session() as sess:
@@ -53,7 +53,7 @@ def eval_once(saver, summary_writer, top_k_op, summary_op):
       total_sample_count = num_iter * FLAGS.batch_size
       step = 0
       while step < num_iter and not coord.should_stop():
-        predictions = sess.run(top_k_op)
+        predictions = sess.run(Overlap_rate)
         true_count += np.sum(predictions)
         step += 1
 
@@ -71,7 +71,7 @@ def eval_once(saver, summary_writer, top_k_op, summary_op):
     coord.join(threads, stop_grace_period_secs=10)
 
 def evaluate():
-  """Eval small_project for a number of steps."""
+  """Eval U-net model for a number of steps."""
   with tf.Graph().as_default() as g:
     eval_data = FLAGS.eval_data == 'test'
     images, labels = Unet.inputs(eval_data=eval_data)
@@ -82,10 +82,8 @@ def evaluate():
     labels = tf.math.divide(labels, 255)
     labels = tf.reshape(labels, [FLAGS.batch_size, height * width])
 
-    #top_k_op = tf.nn.in_top_k(logits, tf.cast(labels, tf.int32), height * width)
-    top_k_op = tf.multiply(logits, labels)
-    denominator = tf.reduce_sum(tf.square(logits), 1) * tf.reduce_sum(tf.square(labels), 1)
-    top_k_op = tf.math.divide(tf.reduce_sum(top_k_op, 1), tf.sqrt(denominator))
+    Overlap_rate = tf.multiply(logits, labels)
+    Overlap_rate = tf.math.divide(tf.reduce_sum(Overlap_rate, 1), tf.reduce_sum(labels, 1))
 
     variable_averages = tf.train.ExponentialMovingAverage(Unet.MOVING_AVERAGE_DECAY)
     variables_to_restore = variable_averages.variables_to_restore()
@@ -96,7 +94,7 @@ def evaluate():
     summary_writer = tf.summary.FileWriter(FLAGS.eval_dir, g)
 
     while True:
-      eval_once(saver, summary_writer, top_k_op, summary_op)
+      eval_once(saver, summary_writer, Overlap_rate, summary_op)
       if FLAGS.run_once:
         break
       time.sleep(FLAGS.eval_interval_secs)

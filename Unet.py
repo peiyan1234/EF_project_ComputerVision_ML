@@ -22,10 +22,10 @@ IMAGE_SIZE = Unet_input.IMAGE_SIZE
 NUM_EXAMPLES_PER_EPOCH_FOR_TRAIN = Unet_input.NUM_EXAMPLES_PER_EPOCH_FOR_TRAIN
 NUM_EXAMPLES_PER_EPOCH_FOR_EVAL = Unet_input.NUM_EXAMPLES_PER_EPOCH_FOR_EVAL
 
-MOVING_AVERAGE_DECAY = 0.9999
-NUM_EPOCHS_PER_DECAY = 100
-LEARNING_RATE_DECAY_FACTOR = 0.12
-INITIAL_LEARNING_RATE = 0.12
+MOVING_AVERAGE_DECAY = 0.9
+NUM_EPOCHS_PER_DECAY = 1000
+LEARNING_RATE_DECAY_FACTOR = 0.15
+INITIAL_LEARNING_RATE = 0.2
 
 """
 If a model is trained with multiple GPUs, prefix all op names with tower_name
@@ -413,7 +413,7 @@ def inference(images):
     return conv10
 
 def loss(images, labels):
-    """a pixel-wise soft-max
+    """pixel-wise 
 
     Add summary for "Loss" and "Loss/avg"
     Args:
@@ -429,10 +429,12 @@ def loss(images, labels):
     reshape_labels = tf.cast(tf.reshape(labels, [-1]), tf.float32)
     reshape_labels = tf.math.divide(reshape_labels, 255)
     labels = tf.cast(reshape_labels, tf.float32)
-    logits = tf.exp(reshaped_images) / tf.reduce_sum(tf.exp(reshaped_images))
-    cross_entropy = tf.nn.weighted_cross_entropy_with_logits(targets = labels, logits = logits, pos_weight = 1)
-    cross_entropy_mean = tf.reduce_mean(cross_entropy, name='cross_entropy')
-    tf.add_to_collection('losses', cross_entropy_mean)
+    #logits = tf.math.divide(tf.exp(reshaped_images), tf.reduce_sum(tf.exp(reshaped_images)))
+    #cross_entropy = tf.nn.weighted_cross_entropy_with_logits(targets = labels, logits = logits, pos_weight = 1)
+    #cross_entropy_sum = tf.reduce_sum(cross_entropy, name='cross_entropy')
+    #tf.add_to_collection('losses', cross_entropy_sum)
+    loss = tf.losses.log_loss(labels = labels, predictions = reshaped_images)
+    tf.add_to_collection('losses', loss)
 
     return tf.add_n(tf.get_collection('losses'), name='total_loss')
 
