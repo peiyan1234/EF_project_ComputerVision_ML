@@ -12,7 +12,7 @@ import Unet
 
 FLAGS = tf.app.flags.FLAGS
 
-epoch = 1000
+epoch = 100
 steps = epoch * math.ceil(Unet.NUM_EXAMPLES_PER_EPOCH_FOR_TRAIN / FLAGS.batch_size)
 
 tf.app.flags.DEFINE_string('train_dir', '/home/alvinli/Desktop/EF/dataset/EF-training-Pool/train', """Directory where to write event logs and checkpoint.""")

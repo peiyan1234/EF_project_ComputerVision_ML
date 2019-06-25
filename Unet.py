@@ -13,7 +13,7 @@ import tensorflow as tf
 import Unet_input
 
 FLAGS = tf.app.flags.FLAGS
-tf.app.flags.DEFINE_integer('batch_size', 1, 'Number of images to process in a batch')
+tf.app.flags.DEFINE_integer('batch_size', 5, 'Number of images to process in a batch')
 tf.app.flags.DEFINE_string('dir_data', '/home/alvinli/Desktop/EF/dataset/EF-training-Pool', 'Path to the EF data directory')
 tf.app.flags.DEFINE_boolean('use_fp16', False, 'Train the model using fp16')
 
@@ -22,10 +22,10 @@ IMAGE_SIZE = Unet_input.IMAGE_SIZE
 NUM_EXAMPLES_PER_EPOCH_FOR_TRAIN = Unet_input.NUM_EXAMPLES_PER_EPOCH_FOR_TRAIN
 NUM_EXAMPLES_PER_EPOCH_FOR_EVAL = Unet_input.NUM_EXAMPLES_PER_EPOCH_FOR_EVAL
 
-MOVING_AVERAGE_DECAY = 0.9
-NUM_EPOCHS_PER_DECAY = 1000
-LEARNING_RATE_DECAY_FACTOR = 0.15
-INITIAL_LEARNING_RATE = 0.2
+MOVING_AVERAGE_DECAY = 0.99
+NUM_EPOCHS_PER_DECAY = 100
+LEARNING_RATE_DECAY_FACTOR = 0.12
+INITIAL_LEARNING_RATE = 0.12
 
 """
 If a model is trained with multiple GPUs, prefix all op names with tower_name
@@ -413,7 +413,7 @@ def inference(images):
     return conv10
 
 def loss(images, labels):
-    """pixel-wise 
+    """a pixel-wise binary cross-entropy loss function
 
     Add summary for "Loss" and "Loss/avg"
     Args:
