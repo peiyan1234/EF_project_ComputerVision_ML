@@ -429,10 +429,6 @@ def loss(images, labels):
     reshape_labels = tf.cast(tf.reshape(labels, [-1]), tf.float32)
     reshape_labels = tf.math.divide(reshape_labels, 255)
     labels = tf.cast(reshape_labels, tf.float32)
-    #logits = tf.math.divide(tf.exp(reshaped_images), tf.reduce_sum(tf.exp(reshaped_images)))
-    #cross_entropy = tf.nn.weighted_cross_entropy_with_logits(targets = labels, logits = logits, pos_weight = 1)
-    #cross_entropy_sum = tf.reduce_sum(cross_entropy, name='cross_entropy')
-    #tf.add_to_collection('losses', cross_entropy_sum)
     loss = tf.losses.log_loss(labels = labels, predictions = reshaped_images)
     tf.add_to_collection('losses', loss)
 

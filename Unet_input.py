@@ -86,7 +86,7 @@ def read_data(queue, label_images):
         pass
     result = dataRecord()
 
-    result.width, result.height = IMAGE_SIZE
+    result.height, result.width,  = IMAGE_SIZE
     result.depth = 1
 
     tf_filenames = tf.convert_to_tensor(queue, dtype=tf.string)
